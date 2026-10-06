@@ -1,0 +1,388 @@
+==================================================================
+  Guardian 관제 실습 - 환경 준비 가이드
+==================================================================
+
+[ 전체 구성 ]
+
+  실제 PC (VirtualBox)
+   └─ Windows 10 VM  ......... 인터넷 연결 O, DWAgent로 화면 공유
+       └─ VirtualBox (중첩)
+           ├─ 보안 서버 (칼리)  192.168.56.10  guardian.py 실행
+           └─ 공격자   (칼리)  192.168.56.20  공격 시도
+              └ 두 칼리는 "내부 네트워크 lab" 으로만 연결 (인터넷 X)
+
+[ 진행 순서 ]
+
+  0. 실제 PC 준비
+  1. Windows 10 VM 준비
+  2. 칼리 이미지 받기 + 서버 VM 만들기
+  3. 공격자 VM 만들기 (복제)
+  4. 칼리 첫 실행 + 기본 설정
+  5. 도구 설치 + Guardian 파일 옮기기   (인터넷 필요 - NAT 상태)
+  6. 내부 네트워크로 전환 + IP 지정     (여기서부터 인터넷 X)
+  7. Guardian 실행 + 공격 테스트
+  8. 시연용 화면 공유 (DWAgent)
+  9. 문제 해결 모음
+  10. 시연 당일 체크리스트
+
+각 단계가 끝날 때마다 [확인] 항목을 체크하고 다음으로 넘어가세요.
+
+
+==================================================================
+ 0. 실제 PC 준비
+==================================================================
+
+[0-1] 중첩 가상화 켜기 (Windows 10 VM 안에서 VM을 돌리기 위해)
+
+  1) Windows 10 VM 을 "시스템 종료" 로 완전히 끔
+     - VirtualBox 관리자에서 상태가 "전원 꺼짐" 인지 확인
+     - "저장됨" 이면 우클릭 > 저장된 상태 삭제
+  2) 관리자 PowerShell 에서 (VirtualBox 설치 폴더로 이동 후)
+
+       cd "E:\VirtualBox"
+       .\VBoxManage modifyvm "Windows 10" --nested-hw-virt on
+
+     ※ PowerShell 은 앞에 .\ 를 꼭 붙여야 실행됨
+  3) 확인
+       .\VBoxManage showvminfo "Windows 10" | Select-String "Nested"
+     -> "enabled" 가 보이면 성공
+
+[0-2] Windows 10 VM 자원
+
+  - 메모리: 6~8GB 이상 (단, 실제 PC 메모리의 절반 이하)
+  - CPU: 4개
+  - 설정 > 시스템 > 가속 > "네스티드 페이징" 체크
+
+[0-3] 갑자기 꺼짐/재부팅 방지
+
+  - 설정 > 시스템 > 전원 및 절전 > 절전 모드 "안 함"
+  - 설정 > 업데이트 및 보안 > "7일 동안 업데이트 일시 중지"
+  - Windows 보안 > 바이러스 및 위협 방지 > 설정 관리 > 제외 추가
+    > VM 폴더 (예: E:\Linux, E:\VirtualBox VMs)
+  - PC 는 멀티탭보다 벽 콘센트에 직접 연결 권장
+  - (선택) HWiNFO64 를 Sensors-only 로 켜고 "Logging start"
+    -> 또 꺼지면 CSV 마지막 줄에서 온도/전력 확인 가능
+
+  ※ 이전에 이벤트 41/6008 (예기치 않은 종료) 기록이 있었음.
+    온도는 최고 76도로 정상 -> 전원/파워/오버클럭 쪽을 의심 중.
+
+[확인] Windows 10 VM 안에서 작업 관리자 > 성능 > CPU > "가상화: 사용"
+
+
+==================================================================
+ 1. Windows 10 VM 준비
+==================================================================
+
+  - 위 [0-3] 의 절전 끄기 / 업데이트 일시 중지 / 백신 제외를
+    Windows 10 VM 안에서도 똑같이 설정
+  - VirtualBox 설치 (virtualbox.org)
+  - DWAgent 는 이미 설치됨 ("디딤돌 프로젝트", 관리자 계정 소유)
+  - (권장) 시연용 "표준 사용자" 윈도우 계정을 따로 만들어 사용
+    -> 다른 사람이 DWAgent 를 끄거나 지우지 못함
+    설정 > 계정 > 가족 및 다른 사용자 > 이 PC에 다른 사용자 추가
+
+[확인] Windows 10 VM 안에서 VirtualBox 가 실행됨
+
+
+==================================================================
+ 2. 칼리 이미지 받기 + 서버 VM 만들기
+==================================================================
+
+[2-1] 다운로드 (Windows 10 VM 안에서)
+
+  kali.org/get-kali > Virtual Machines > VirtualBox (.7z)
+  -> 우클릭 > WinRAR 로 압축 풀기 (예: E:\Linux\Kali-Server)
+  -> 폴더 안에 .vbox / .vdi 파일 확인
+
+  ※ 예전에 ISO 로 만들던 VM 은 우클릭 > 제거 > "모든 파일 삭제"
+
+[2-2] VirtualBox 에 추가
+
+  머신 > 추가 > .vbox 파일 선택
+
+[2-3] 설정 (켜기 전에! 설정 창 위쪽 "Expert" 탭)
+
+  일반 > 이름 ..................... 보안 서버
+  시스템 > 마더보드 > 메모리 ........ 2048MB
+  시스템 > 프로세서 > CPU .......... 2개
+  시스템 > 프로세서 > Processing Cap  80%
+  디스플레이 > 비디오 메모리 ........ 128MB
+  네트워크 > 어댑터 1 .............. NAT   (지금은 인터넷 필요)
+
+[확인] 목록에 "보안 서버" 가 보임 (아직 켜지 않음)
+
+
+==================================================================
+ 3. 공격자 VM 만들기 (복제)
+==================================================================
+
+  보안 서버를 "한 번도 켜지 않은 상태" 에서:
+
+  1) 보안 서버 우클릭 > 복제
+  2) 이름: 공격자
+  3) MAC 주소 정책: "모든 네트워크 어댑터의 새 MAC 주소 생성"  <- 필수!
+  4) 복제 방식: 완전한 복제
+  5) 복제된 "공격자" 설정에서 CPU 를 1개로 변경
+
+  ※ MAC 이 같으면 두 VM 통신이 꼬이고 ARP 탐지가 오작동함
+    이미 복제했다면: 설정 > 네트워크 > 고급 > MAC 주소 옆 새로고침
+
+[확인] 목록에 "보안 서버", "공격자" 두 개
+
+
+==================================================================
+ 4. 칼리 첫 실행 + 기본 설정
+==================================================================
+
+  기본 계정:  아이디 kali  /  비밀번호 kali
+
+[두 VM 공통]
+  passwd                     # 기본 비밀번호 변경 (꼭!)
+
+[호스트 이름 바꾸기 - 서버와 공격자 구분용]
+  # 공격자 VM
+  sudo hostnamectl set-hostname attacker
+  sudo sed -i 's/^127\.0\.1\.1.*/127.0.1.1\tattacker/' /etc/hosts
+
+  # 보안 서버 (이름을 바꾸고 싶다면)
+  sudo hostnamectl set-hostname server
+  sudo sed -i 's/^127\.0\.1\.1.*/127.0.1.1\tserver/' /etc/hosts
+
+  # 터미널을 새로 열면 kali@attacker / kali@server 로 보임
+  # ※ 두 번째 줄(/etc/hosts 수정)을 빠뜨리면 sudo 때마다
+  #   "unable to resolve host" 경고가 뜸
+
+[두 VM 공통 - 선택, CPU 부담 줄이기]
+  칼리 메뉴 > 설정 > 창 관리자 조정(Window Manager Tweaks)
+  > 합성기(Compositor) > "디스플레이 합성 사용" 체크 해제
+
+[확인] 두 VM 모두 로그인되고 터미널이 열림
+
+
+==================================================================
+ 5. 도구 설치 + Guardian 파일 옮기기  (네트워크 = NAT 상태)
+==================================================================
+
+[5-1] 보안 서버
+
+  sudo apt update
+  sudo apt install -y python3-scapy openssh-server
+  sudo systemctl enable --now ssh      # SSH 공격 테스트 표적
+
+[5-2] 공격자
+
+  sudo apt update
+  sudo apt install -y nmap hping3 dsniff
+
+[5-3] Guardian 파일을 보안 서버로 옮기기 (공유 폴더)
+
+  1) Windows 10 에 C:\guardian 폴더를 만들고 파일 넣기
+     guardian.py / config.json / selftest.py / README.md
+  2) 보안 서버 VM 설정 > 공유 폴더 > + > 폴더 경로 C:\guardian
+     > "자동 마운트" 체크 > 확인
+  3) 보안 서버 칼리에서:
+       sudo adduser $USER vboxsf
+       sudo reboot
+  4) 재부팅 후:
+       cp -r /media/sf_guardian ~/guardian
+       ls ~/guardian
+
+[5-4] 자체 테스트
+
+  cd ~/guardian
+  python3 selftest.py
+
+[확인] "결과: 6/6 통과"
+
+  ※ 6단계부터 인터넷이 끊김. 더 설치할 게 있으면 지금!
+
+
+==================================================================
+ 6. 내부 네트워크로 전환 + IP 지정
+==================================================================
+
+[6-1] VirtualBox 설정 (두 VM 모두 끈 상태에서)
+
+  설정 > 네트워크 > 어댑터 1
+   - Attached to: 내부 네트워크
+   - Name: lab        (두 VM 이 대소문자까지 똑같아야 함)
+
+[6-2] 고정 IP (재부팅해도 유지됨)
+
+  먼저 인터페이스 이름 확인:  ip a   (보통 eth0)
+
+  # 보안 서버
+  sudo nmcli con add type ethernet ifname eth0 con-name lab ipv4.method manual ipv4.addresses 192.168.56.10/24
+  sudo nmcli con mod lab connection.autoconnect-priority 10
+  sudo nmcli con up lab
+
+  # 공격자
+  sudo nmcli con add type ethernet ifname eth0 con-name lab ipv4.method manual ipv4.addresses 192.168.56.20/24
+  sudo nmcli con mod lab connection.autoconnect-priority 10
+  sudo nmcli con up lab
+
+[6-3] 연결 확인
+
+  보안 서버에서:  ping -c 3 192.168.56.20
+  공격자에서:    ping -c 3 192.168.56.10
+  아무 곳에서:   ping -c 2 8.8.8.8      # 실패해야 정상 (인터넷 차단)
+
+[확인] 서로 ping 성공 + 8.8.8.8 실패
+
+
+==================================================================
+ 7. Guardian 실행 + 공격 테스트
+==================================================================
+
+[7-1] config.json 확인 (보안 서버)
+
+  nano ~/guardian/config.json
+   - "interface": "eth0"        <- ip a 로 확인한 이름
+   - "dry_run": true            <- 처음엔 탐지만 확인
+  (저장: Ctrl+O, Enter / 종료: Ctrl+X)
+
+[7-2] 실행 (보안 서버)
+
+  cd ~/guardian
+  sudo python3 guardian.py
+
+  다른 터미널에서 API 확인:
+  curl http://127.0.0.1:8000/api/status
+
+[7-3] 공격 테스트 (공격자에서, 하나씩)
+
+  ① 포트 스캔        -> port_scan
+     sudo nmap -sS 192.168.56.10
+
+  ② 핑 플러드        -> icmp_flood
+     sudo ping -f -c 500 192.168.56.10
+
+  ③ SYN 플러드       -> syn_flood
+     sudo hping3 -S -p 80 -i u1000 -c 2000 192.168.56.10
+     (--flood 는 VM 이 멈출 수 있으니 쓰지 말 것)
+
+  ④ SSH 대입 흉내    -> ssh_bruteforce
+     for i in $(seq 15); do nc -z -w1 192.168.56.10 22; done
+
+  ⑤ ARP 변조 흉내    -> arp_spoof
+     먼저 공격자에서 ping -c 2 192.168.56.10  (서버가 진짜 MAC 을 학습)
+     그다음:
+     sudo python3 -c "from scapy.all import *; sendp(Ether(dst='ff:ff:ff:ff:ff:ff')/ARP(op=2,psrc='192.168.56.20',hwsrc='de:ad:be:ef:00:01',pdst='192.168.56.10'),iface='eth0',count=3)"
+     ※ 실습망에 VM 이 2대뿐이라 arpspoof 로 게이트웨이를 사칭하는
+       방식은 쓸 수 없음 -> 같은 IP 의 MAC 이 바뀌는 상황을 직접 만들어 테스트
+
+  ※ 같은 IP 로 한 번 탐지되면 쿨다운(30초) 동안 같은 알림은 다시 안 뜸
+    차단 테스트 중엔 한 공격씩, 해제 후 다음 공격 진행
+
+[7-4] 실제 차단 테스트
+
+  1) Ctrl+C 로 Guardian 종료
+  2) config.json 에서 "dry_run": false
+  3) 다시 sudo python3 guardian.py
+  4) 공격자에서 ① 포트 스캔 실행 -> 서버에 [BLOCK] 표시
+  5) 공격자에서 ping 192.168.56.10 -> 응답 없으면 방어 성공
+  6) 해제 (보안 서버 다른 터미널):
+     curl -X POST http://127.0.0.1:8000/api/unblock -H "Content-Type: application/json" -d '{"target":"192.168.56.20"}'
+     (또는 5분 기다리면 자동 해제)
+
+[확인] 탐지 -> 차단 -> 해제 흐름이 모두 동작
+
+
+==================================================================
+ 8. 시연용 화면 공유 (DWAgent)
+==================================================================
+
+  권한 관리는 관리자 1명만 (DWService 계정은 관리자만 보유)
+
+[8-1] 보기 전용 공유 만들기 (관리자, 브라우저에서)
+
+  dwservice.net 로그인 > Agents > "디딤돌 프로젝트" 오른쪽 ⋮
+  > New Share
+   - Full Access 체크 해제
+   - Screen 만 체크 -> 렌치 아이콘 -> 마우스/키보드 끄기
+   - Login Enable 체크 -> 비밀번호 지정
+   - Validity: Always 해제 -> 시연 시간대만
+  > 생성된 ID + 비밀번호를 시청자에게 전달
+
+  시청자: dwservice.net 첫 화면에서 ID/비밀번호로 접속 -> 화면만 봄
+
+[8-2] 화면 배치
+
+  Windows 10 화면 왼쪽: 공격자 VM / 오른쪽: 보안 서버 VM
+  -> "공격 -> 탐지 -> 차단" 이 한 화면에 보임
+  보안 서버 터미널 글꼴을 크게 (원격 화면은 화질이 떨어짐)
+
+[8-3] 시연 후
+
+  dwservice.net 에서 이번 공유 삭제
+  DWAgent 모니터 > Unattended access 를 No 로 (선택)
+
+
+==================================================================
+ 9. 문제 해결 모음
+==================================================================
+
+  증상: VMware/VirtualBox "This host does not support AMD-V"
+  -> [0-1] 중첩 가상화 다시 확인. VM 을 "다시 시작" 이 아니라
+     완전히 껐다 켜야 적용됨. 실제 PC 에 Hyper-V 가 켜져 있으면
+     (VirtualBox 상태표시줄에 초록 거북이) 관리자 PowerShell 에서
+       bcdedit /set hypervisorlaunchtype off   후 재부팅
+     (되돌리기: bcdedit /set hypervisorlaunchtype auto)
+     ※ 이때 WSL2/Docker 는 동작 안 함
+     ※ VMware 는 VirtualBox 중첩과 호환이 안 되어 VirtualBox 로 교체함
+
+  증상: PowerShell 에서 'VBoxManage' 를 인식 못 함
+  -> 앞에 .\ 를 붙여서  .\VBoxManage ...
+
+  증상: 설정 창이 전부 회색
+  -> VM 이 켜져 있거나 "저장됨" 상태. 완전히 끄고 다시 열기
+
+  증상: 두 VM 이 서로 ping 이 안 됨
+  -> 네트워크 이름 lab 이 똑같은지 / MAC 주소가 서로 다른지 /
+     ip a 로 IP 가 들어갔는지 확인 / sudo nmcli con up lab
+
+  증상: /media/sf_guardian 이 안 보임
+  -> sudo adduser $USER vboxsf 후 재부팅 했는지 확인
+     공유 폴더 설정에서 "자동 마운트" 체크 확인
+
+  증상: 다시 인터넷이 필요함 (패키지 설치 등)
+  -> VirtualBox 에서 어댑터를 잠깐 NAT 로 바꾸고 sudo nmcli con down lab
+     끝나면 다시 내부 네트워크 lab + sudo nmcli con up lab
+
+  증상: Guardian 이 강제 종료된 뒤 네트워크가 이상함
+  -> iptables 규칙이 남은 것. 보안 서버에서:
+       sudo iptables -D INPUT -j GUARDIAN
+       sudo iptables -F GUARDIAN
+       sudo iptables -X GUARDIAN
+
+  증상: 인터페이스에 IP 가 없다는 Guardian 오류
+  -> config.json 의 "interface" 를 ip a 결과와 맞추기
+
+  증상: CPU 사용률이 너무 높음
+  -> 칼리 VM CPU 1~2개 (합계가 Windows 10 VM 코어보다 적게)
+     Processing Cap 70~80% / 백신 검사 제외 / 합성기 끄기
+     그래도 무거우면: 칼리 VM 을 실제 PC 의 VirtualBox 로 옮기는 것 고려
+
+  증상: PC 가 또 갑자기 꺼짐
+  -> 이벤트 뷰어 > 시스템 > 41 이벤트의 BugcheckCode / SleepInProgress 확인
+     HWiNFO 로그 마지막 줄의 온도/전력 확인
+     벽 콘센트 직결, BIOS 오버클럭(XMP/EXPO, PBO) 끄기
+
+
+==================================================================
+ 10. 시연 당일 체크리스트
+==================================================================
+
+  [ ] 전날: 실제 PC / Windows 10 VM 업데이트 설치 + 재부팅 완료
+  [ ] 전날: 업데이트 일시 중지 / 절전 "안 함" 확인
+  [ ] 실제 PC 벽 콘센트 직결, 다른 프로그램 종료
+  [ ] Windows 10 VM 실행 -> DWAgent "Online" 확인
+  [ ] 시청자용 공유 생성 (Screen 만, 마우스/키보드 끔, 기간 제한)
+  [ ] 두 칼리 VM 실행 -> 서로 ping 확인
+  [ ] 보안 서버: config.json 의 dry_run 값 확인 (실제 차단이면 false)
+  [ ] 보안 서버: sudo python3 guardian.py 실행
+  [ ] 공격자: 테스트 명령 미리 메모장에 준비
+  [ ] 화면 배치 (왼쪽 공격자 / 오른쪽 서버), 터미널 글꼴 키우기
+  [ ] 시연 후: 공유 삭제, Guardian Ctrl+C 로 정상 종료
+
+==================================================================

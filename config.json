@@ -1,0 +1,24 @@
+{
+  "interface": "eth0",
+  "dry_run": true,
+  "whitelist": ["127.0.0.1"],
+  "block_duration_sec": 300,
+  "alert_cooldown_sec": 30,
+  "enable_syncookies": true,
+  "log_file": "logs/events.jsonl",
+
+  "api": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8000
+  },
+
+  "rules": {
+    "port_scan":      { "enabled": true, "window_sec": 10, "distinct_ports": 20, "block": true },
+    "syn_flood":      { "enabled": true, "window_sec": 5,  "max_syn": 200, "global_max_syn": 1000, "block": true },
+    "icmp_flood":     { "enabled": true, "window_sec": 5,  "max_packets": 50, "block": true },
+    "ssh_bruteforce": { "enabled": true, "ports": [22], "window_sec": 60, "max_attempts": 10, "block": true },
+    "arp_spoof":      { "enabled": true, "block": true },
+    "exfiltration":   { "enabled": true, "window_sec": 60, "max_bytes": 50000000 }
+  }
+}
