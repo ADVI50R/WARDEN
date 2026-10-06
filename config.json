@@ -15,7 +15,7 @@
 
   "rules": {
     "port_scan":      { "enabled": true, "window_sec": 10, "distinct_ports": 20, "block": true },
-    "syn_flood":      { "enabled": true, "window_sec": 5,  "max_syn": 200, "global_max_syn": 1000, "block": true },
+    "syn_flood":      { "enabled": true, "window_sec": 5,  "max_syn": 200, "global_max_syn": 1000, "global_min_sources": 10, "block": true },
     "icmp_flood":     { "enabled": true, "window_sec": 5,  "max_packets": 50, "block": true },
     "ssh_bruteforce": { "enabled": true, "ports": [22], "window_sec": 60, "max_attempts": 10, "block": true },
     "arp_spoof":      { "enabled": true, "block": true },

@@ -15,7 +15,7 @@ guardian/
 |---|---|---|
 | 포트 스캔 | 10초 안에 서로 다른 포트 20개 이상 접속 시도 | IP 차단 |
 | SYN 플러드 | 5초 안에 한 IP에서 SYN 200개 이상 | IP 차단 |
-| 출발지 위조 SYN 플러드 | 5초 안에 전체 SYN 1000개 이상 | 알림 + syncookies |
+| 출발지 위조 SYN 플러드 | 5초 안에 전체 SYN 1000개 이상 + 출발지 10곳 이상 | 알림 + syncookies |
 | ICMP(핑) 플러드 | 5초 안에 ping 50개 이상 | IP 차단 |
 | SSH 무차별 대입 | 60초 안에 22번 포트 접속 10회 이상 | IP 차단 |
 | ARP 스푸핑 | 이미 알던 IP의 MAC 주소가 바뀜 | MAC 차단 |
@@ -82,6 +82,9 @@ sudo python3 guardian.py
 curl http://127.0.0.1:8000/api/status
 curl -X POST http://127.0.0.1:8000/api/unblock -H "Content-Type: application/json" -d '{"target":"192.168.56.20"}'
 ```
+- `target` 은 IP **하나** 또는 `mac:aa:bb:cc:dd:ee:ff` 만 허용합니다. `0.0.0.0/0` 같은 범위는 실수로 서버 전체를 막을 수 있어 400 오류로 거부합니다.
+- 차단/해제가 안 된 경우 `{"ok": false, "reason": "이미 차단 중"}` 처럼 이유가 함께 옵니다 (`화이트리스트 대상`, `차단 목록에 없음`).
+
 대시보드에서는 `fetch()` 로 2~3초마다 `/api/events` 를 불러오면 실시간처럼 보입니다. CORS 허용이 되어 있어서 다른 포트에서 띄운 대시보드에서도 호출됩니다.
 
 ### 방법 B – 로그 파일

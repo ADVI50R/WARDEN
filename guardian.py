@@ -9,8 +9,10 @@ Guardian - 실습용 리눅스 네트워크 관제/방어 도구 (초안)
 
 실행: sudo python3 guardian.py
 """
+import ipaddress
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -70,14 +72,16 @@ def now_iso(ts=None):
 
 
 # ─────────────────────────── 이벤트 기록 ───────────────────────────
-def emit(ev_type, source, severity, detail, action="alert"):
-    """이벤트를 메모리/파일/화면에 기록. 쿨다운 중이면 False 반환."""
+def emit(ev_type, source, severity, detail, action="alert", cooldown=True):
+    """이벤트를 메모리/파일/화면에 기록. 쿨다운 중이면 False 반환.
+    cooldown=False: 차단 해제·수동 조작처럼 매번 남겨야 하는 기록용"""
     now = time.time()
     key = (ev_type, source)
     with lock:
-        if now - last_alert.get(key, 0) < CFG["alert_cooldown_sec"]:
-            return False
-        last_alert[key] = now
+        if cooldown:
+            if now - last_alert.get(key, 0) < CFG["alert_cooldown_sec"]:
+                return False
+            last_alert[key] = now
         ev = {
             "id": uuid.uuid4().hex[:12],
             "timestamp": now_iso(now),
@@ -101,6 +105,14 @@ def emit(ev_type, source, severity, detail, action="alert"):
 # ─────────────────────────── 방화벽(iptables) ───────────────────────────
 def iptables(*args):
     return subprocess.run(["iptables", *args], capture_output=True, text=True)
+
+
+def iptables_checked(*args):
+    """규칙 추가/삭제용: 실패하면 화면에 이유를 보여줌 (조용히 실패하면 '차단된 줄' 착각함)"""
+    r = iptables(*args)
+    if r.returncode != 0:
+        print(f"[!] iptables {' '.join(args)} 실패: {r.stderr.strip()}")
+    return r.returncode == 0
 
 
 def setup_firewall():
@@ -144,7 +156,7 @@ def block(target, reason, duration=None):
         blocked[target] = {"since": time.time(), "until": time.time() + duration, "reason": reason}
         stats["blocks_total"] += 1
     if not DRY_RUN:
-        iptables("-A", CHAIN, *_rule_args(target))
+        iptables_checked("-A", CHAIN, *_rule_args(target))
     print(f"\033[41m[BLOCK]{RESET} {target} ({reason}) {duration}초 차단{' [dry-run]' if DRY_RUN else ''}")
     return True
 
@@ -155,8 +167,8 @@ def unblock(target):
     if info is None:
         return False
     if not DRY_RUN:
-        iptables("-D", CHAIN, *_rule_args(target))
-    emit("unblock", target, "info", f"차단 해제 (사유였던 규칙: {info['reason']})", "unblock")
+        iptables_checked("-D", CHAIN, *_rule_args(target))
+    emit("unblock", target, "info", f"차단 해제 (사유였던 규칙: {info['reason']})", "unblock", cooldown=False)
     return True
 
 
@@ -214,10 +226,13 @@ def check_syn_flood(src, now):
     if len(q) >= r["max_syn"]:
         fire("syn_flood", src, "critical", f"{r['window_sec']}초 동안 SYN {len(q)}개")
     # 출발지를 위조(랜덤)하는 공격 대비: 전체 SYN 양도 감시 (차단 대상이 없으므로 알림만)
-    total = record("syn_flood", "*", 1, r["window_sec"], now)
-    if len(total) >= r["global_max_syn"]:
+    # 출발지가 여러 개일 때만 알림 -> IP 하나가 보내는 일반 SYN 플러드를 '위조'로 오인하지 않음
+    total = record("syn_flood", "*", src, r["window_sec"], now)
+    sources = len({s for _, s in total})
+    if len(total) >= r["global_max_syn"] and sources >= r.get("global_min_sources", 10):
         emit("syn_flood_distributed", "*", "critical",
-             f"{r['window_sec']}초 동안 전체 SYN {len(total)}개 (출발지 위조 의심, syncookies 로 방어)", "alert")
+             f"{r['window_sec']}초 동안 출발지 {sources}곳에서 SYN {len(total)}개 "
+             f"(출발지 위조 의심, syncookies 로 방어)", "alert")
 
 
 def check_ssh(src, now):
@@ -283,7 +298,11 @@ def _handle(pkt):
     if src == MY_IP:                      # 나가는 트래픽 -> 유출 감시
         check_exfil(dst, len(pkt), now)
         return
-    if dst != MY_IP or src in blocked:    # 나에게 온 게 아니거나 이미 차단한 IP
+    if dst != MY_IP:                      # 나에게 온 게 아님
+        return
+    # 이미 차단한 IP 는 무시 (실제로는 iptables 가 버리고 있음).
+    # 단, dry-run 에선 진짜로 막힌 게 아니므로 계속 탐지해야 다음 공격 테스트가 보임
+    if src in blocked and not DRY_RUN:
         return
 
     if TCP in pkt:
@@ -301,6 +320,21 @@ def _handle(pkt):
 
 
 # ─────────────────────────── 대시보드용 REST API ───────────────────────────
+MAC_RE = re.compile(r"^[0-9a-f]{2}(:[0-9a-f]{2}){5}$")
+
+
+def normalize_target(text):
+    """수동 차단/해제 대상 검사. 올바르면 정리된 문자열, 아니면 None.
+    '0.0.0.0/0' 같은 범위를 막지 않으면 실수 한 번에 서버 전체가 차단될 수 있음"""
+    t = text.strip().lower()
+    if t.startswith("mac:"):
+        return t if MAC_RE.match(t[4:]) else None
+    try:
+        return str(ipaddress.ip_address(t))
+    except ValueError:
+        return None
+
+
 class API(BaseHTTPRequestHandler):
     def _headers(self, code, length=0):
         self.send_response(code)
@@ -319,9 +353,10 @@ class API(BaseHTTPRequestHandler):
     def _body(self):
         n = int(self.headers.get("Content-Length", 0))
         try:
-            return json.loads(self.rfile.read(n) or b"{}")
-        except json.JSONDecodeError:
+            body = json.loads(self.rfile.read(n) or b"{}")
+        except (json.JSONDecodeError, UnicodeDecodeError):
             return {}
+        return body if isinstance(body, dict) else {}
 
     def do_OPTIONS(self):
         self._headers(204)
@@ -329,6 +364,10 @@ class API(BaseHTTPRequestHandler):
     def do_GET(self):
         u = urlparse(self.path)
         q = parse_qs(u.query)
+        try:
+            limit = max(1, int(q.get("limit", ["50"])[0]))
+        except ValueError:
+            return self._send(400, {"error": "limit 은 숫자여야 합니다"})
         if u.path == "/api/status":
             with lock:
                 self._send(200, {
@@ -338,7 +377,6 @@ class API(BaseHTTPRequestHandler):
                     "blocked_count": len(blocked), "stats": dict(stats),
                 })
         elif u.path == "/api/events":
-            limit = int(q.get("limit", ["50"])[0])
             ev_type = q.get("type", [None])[0]
             with lock:
                 data = [e for e in events if not ev_type or e["type"] == ev_type]
@@ -357,16 +395,24 @@ class API(BaseHTTPRequestHandler):
     def do_POST(self):
         u = urlparse(self.path)
         body = self._body()
-        target = body.get("target", "").strip()
+        target = normalize_target(str(body.get("target", "")))
         if not target:
-            return self._send(400, {"error": "target 필요 (예: {\"target\": \"192.168.56.20\"})"})
+            return self._send(400, {"error": "target 은 IP 하나 또는 'mac:aa:bb:cc:dd:ee:ff' 형식이어야 합니다 "
+                                             "(예: {\"target\": \"192.168.56.20\"})"})
         if u.path == "/api/block":
-            ok = block(target, body.get("reason", "manual"), body.get("duration_sec"))
+            duration = body.get("duration_sec")
+            if duration is not None and (not isinstance(duration, int) or duration <= 0):
+                return self._send(400, {"error": "duration_sec 은 1 이상의 정수(초)여야 합니다"})
+            if is_whitelisted(target):
+                return self._send(200, {"ok": False, "reason": "화이트리스트 대상"})
+            ok = block(target, str(body.get("reason", "manual")), duration)
             if ok:
-                emit("manual_block", target, "info", "대시보드에서 수동 차단", "block")
-            self._send(200, {"ok": ok})
+                emit("manual_block", target, "info", "대시보드에서 수동 차단",
+                     "block(dry-run)" if DRY_RUN else "block", cooldown=False)
+            self._send(200, {"ok": ok} if ok else {"ok": False, "reason": "이미 차단 중"})
         elif u.path == "/api/unblock":
-            self._send(200, {"ok": unblock(target)})
+            ok = unblock(target)
+            self._send(200, {"ok": ok} if ok else {"ok": False, "reason": "차단 목록에 없음"})
         else:
             self._send(404, {"error": "not found"})
 
