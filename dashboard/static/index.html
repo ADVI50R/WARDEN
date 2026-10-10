@@ -3,73 +3,64 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Guardian 관제 대시보드</title>
+<title>보안 정책 자동화 대시보드</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
-  <h1>🛡️ Guardian 관제</h1>
-  <nav id="tabs">
-    <button data-tab="overview" class="active">개요</button>
-    <button data-tab="events">이벤트</button>
-    <button data-tab="blocked">차단 목록</button>
-    <button data-tab="rules">탐지 규칙</button>
-    <button data-tab="plugins">플러그인</button>
-  </nav>
-  <div id="conn" class="pill">연결 중…</div>
-</header>
-
 <div id="login" hidden>
   <form id="loginForm">
-    <h2>로그인</h2>
-    <p>보안 서버에서 <code>python3 server.py</code> 를 실행할 때 출력된 <b>토큰</b>을 입력하세요.</p>
+    <h2>🔐 로그인</h2>
+    <p>보안 서버에서 <code>python3 dashboard/server.py</code> 를 실행할 때 출력된 <b>토큰</b>을 입력하세요.</p>
     <input id="tokenInput" type="password" placeholder="토큰" autocomplete="off">
-    <button>접속</button>
-    <p id="loginErr" class="err"></p>
+    <button class="btn">접속</button>
+    <div id="loginErr" class="alert error" hidden></div>
   </form>
 </div>
 
-<main id="app">
-  <section id="tab-overview">
-    <div class="cards" id="cards"></div>
-    <div class="grid2">
-      <div class="panel"><h3>유형별 탐지 건수</h3><div id="typeChart"></div></div>
-      <div class="panel"><h3>최근 이벤트</h3><div id="recent"></div></div>
-    </div>
-  </section>
+<main class="page">
+  <h1>🛡️ 보안 정책 자동화 대시보드 (Guardian)</h1>
+  <p class="caption">관제 서버(Kali Linux)의 Guardian 탐지·차단 상태를 실시간으로 보여주는 대시보드입니다.
+    <span id="conn" class="conn">연결 중…</span></p>
 
-  <section id="tab-events" hidden>
-    <div class="panel">
-      <div class="bar"><label>유형 <select id="typeFilter"><option value="">전체</option></select></label></div>
-      <table><thead><tr><th>시간</th><th>유형</th><th>심각도</th><th>출발지</th><th>내용</th><th>대응</th></tr></thead>
-      <tbody id="eventRows"></tbody></table>
-    </div>
-  </section>
+  <h2>📊 시스템 보안 상태 지표</h2>
+  <div class="metrics" id="metrics"></div>
+  <hr>
 
-  <section id="tab-blocked" hidden>
-    <div class="panel">
-      <h3>수동 차단</h3>
-      <form id="blockForm" class="bar">
-        <input id="blockTarget" placeholder="IP 하나 또는 mac:aa:bb:cc:dd:ee:ff" size="34" required>
-        <input id="blockDur" type="number" min="1" placeholder="유지 시간(초, 선택)">
-        <button>차단</button>
-      </form>
-      <h3>현재 차단 목록</h3>
-      <table><thead><tr><th>대상</th><th>이유</th><th>시작</th><th>남은 시간</th><th></th></tr></thead>
-      <tbody id="blockedRows"></tbody></table>
-    </div>
-  </section>
+  <h2>🚨 실시간 공격 탐지 로그</h2>
+  <div class="field-row">
+    <label>이벤트 유형 <select id="typeFilter"><option value="">전체</option></select></label>
+  </div>
+  <div class="df"><table>
+    <thead><tr><th>시간</th><th>출발지 IP</th><th>대상</th><th>이벤트</th><th>위험도</th><th>상태</th><th>상세</th></tr></thead>
+    <tbody id="eventRows"></tbody>
+  </table></div>
+  <hr>
 
-  <section id="tab-rules" hidden>
-    <div class="panel"><h3>현재 탐지 규칙 <small>(읽기 전용 — 수정은 config.json)</small></h3><div id="rulesBox"></div></div>
-  </section>
+  <h2>⚙️ 보안 정책 제어</h2>
+  <p>탐지된 위협에 대해 Guardian 방화벽(iptables) 차단을 직접 적용하거나 해제할 수 있습니다.</p>
+  <form id="blockForm">
+    <label class="lbl" for="blockTarget">차단할 공격자 IP 주소 (또는 mac:aa:bb:cc:dd:ee:ff)</label>
+    <input id="blockTarget" class="txt" required>
+    <label class="lbl" for="blockDur">차단 유지 시간(초, 비우면 기본값)</label>
+    <input id="blockDur" class="txt" type="number" min="1">
+    <button class="btn">🚨 방화벽 차단 정책 적용</button>
+  </form>
+  <div id="blockMsg"></div>
 
-  <section id="tab-plugins" hidden>
-    <div id="pluginList"></div>
-  </section>
+  <h3>현재 차단 목록</h3>
+  <div class="df"><table>
+    <thead><tr><th>대상</th><th>이유</th><th>시작</th><th>남은 시간</th><th></th></tr></thead>
+    <tbody id="blockedRows"></tbody>
+  </table></div>
+  <hr>
+
+  <h2>🧩 보안 플러그인</h2>
+  <p>보안 스크립트·앱을 <code>dashboard/plugins/</code> 폴더에 추가하면 여기에 나타납니다.</p>
+  <div id="pluginList"></div>
+  <hr>
+
+  <details class="expander"><summary>🔧 탐지 규칙 보기 (읽기 전용)</summary><div id="rulesBox"></div></details>
 </main>
-
-<div id="toast"></div>
 <script src="app.js"></script>
 </body>
 </html>
