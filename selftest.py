@@ -44,7 +44,7 @@ g.DRY_RUN = True
 g.MY_IP = "192.168.56.10"
 g.MY_MAC = "aa:bb:cc:dd:ee:ff"
 g.WHITELIST = {g.MY_IP, g.MY_MAC, "127.0.0.1"}
-g.CFG["alert_cooldown_sec"] = 0        # 반복 알림 억제 끄기 (테스트 편의)
+# 쿨다운(30초)은 실제와 같게 둔다 -> 항목마다 IP 가 달라 첫 알림은 항상 뜨고, 화면도 덜 복잡함
 g.LOG_FILE = "logs/selftest.jsonl"
 import os
 os.makedirs("logs", exist_ok=True)
@@ -159,6 +159,45 @@ def t_exfil():
     for _ in range(60):
         g._handle(make_outgoing("203.0.113.9", 1_000_000))
 results.append(run("데이터 유출 (60MB 전송)", "exfiltration", t_exfil))
+
+# 7) dry-run 에서 같은 IP 로 공격을 이어서 해도 계속 탐지되는지
+#    (가이드 7-3 처럼 공격자 한 대로 ①→② 순서대로 테스트하는 상황)
+def t_same_ip():
+    for port in range(2000, 2025):
+        g._handle(make_tcp_syn(ATTACKER, port))   # 포트 스캔 -> (dry-run) 차단 목록에 올라감
+    for _ in range(60):
+        g._handle(make_icmp(ATTACKER))            # 이어서 핑 플러드
+results.append(run("dry-run: 같은 IP 로 연속 공격", "icmp_flood", t_same_ip))
+
+
+# 8) 출발지 위조 SYN 플러드: IP 1개만으로는 '위조' 알림이 뜨면 안 되고, 여러 IP 면 떠야 함
+def run_not(name, expect_type, action):
+    before = count(expect_type)
+    action()
+    ok = count(expect_type) == before
+    mark = "\033[32mPASS\033[0m" if ok else "\033[31mFAIL\033[0m"
+    print(f"  [{mark}] {name}  ->  '{expect_type}' 이벤트 없어야 함")
+    return ok
+
+
+def t_single_flood():
+    for _ in range(1200):
+        g._handle(make_tcp_syn("192.168.56.40", 80))
+results.append(run_not("SYN 플러드 IP 1개 (위조 오탐 없음)", "syn_flood_distributed", t_single_flood))
+
+
+def t_spoofed_flood():
+    for i in range(1200):
+        g._handle(make_tcp_syn(f"10.0.{i // 250}.{i % 250 + 1}", 80))
+results.append(run("출발지 위조 SYN 플러드 (IP 1200개)", "syn_flood_distributed", t_spoofed_flood))
+
+# 9) API 수동 차단 대상 검사: 범위·이상한 값은 거부
+cases = {"192.168.56.20": "192.168.56.20", " MAC:AA:BB:CC:DD:EE:01 ": "mac:aa:bb:cc:dd:ee:01",
+         "0.0.0.0/0": None, "192.168.56.0/24": None, "hello": None, "mac:zz": None}
+ok = all(g.normalize_target(k) == v for k, v in cases.items())
+mark = "\033[32mPASS\033[0m" if ok else "\033[31mFAIL\033[0m"
+print(f"  [{mark}] API 차단 대상 검사 (범위·잘못된 값 거부)")
+results.append(ok)
 
 # ── 결과 요약 ──────────────────────────────────────────────────
 print("-" * 64)
