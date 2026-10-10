@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardian 관제 대시보드</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>🛡️ Guardian 관제</h1>
+  <nav id="tabs">
+    <button data-tab="overview" class="active">개요</button>
+    <button data-tab="events">이벤트</button>
+    <button data-tab="blocked">차단 목록</button>
+    <button data-tab="rules">탐지 규칙</button>
+    <button data-tab="plugins">플러그인</button>
+  </nav>
+  <div id="conn" class="pill">연결 중…</div>
+</header>
+
+<div id="login" hidden>
+  <form id="loginForm">
+    <h2>로그인</h2>
+    <p>보안 서버에서 <code>python3 server.py</code> 를 실행할 때 출력된 <b>토큰</b>을 입력하세요.</p>
+    <input id="tokenInput" type="password" placeholder="토큰" autocomplete="off">
+    <button>접속</button>
+    <p id="loginErr" class="err"></p>
+  </form>
+</div>
+
+<main id="app">
+  <section id="tab-overview">
+    <div class="cards" id="cards"></div>
+    <div class="grid2">
+      <div class="panel"><h3>유형별 탐지 건수</h3><div id="typeChart"></div></div>
+      <div class="panel"><h3>최근 이벤트</h3><div id="recent"></div></div>
+    </div>
+  </section>
+
+  <section id="tab-events" hidden>
+    <div class="panel">
+      <div class="bar"><label>유형 <select id="typeFilter"><option value="">전체</option></select></label></div>
+      <table><thead><tr><th>시간</th><th>유형</th><th>심각도</th><th>출발지</th><th>내용</th><th>대응</th></tr></thead>
+      <tbody id="eventRows"></tbody></table>
+    </div>
+  </section>
+
+  <section id="tab-blocked" hidden>
+    <div class="panel">
+      <h3>수동 차단</h3>
+      <form id="blockForm" class="bar">
+        <input id="blockTarget" placeholder="IP 하나 또는 mac:aa:bb:cc:dd:ee:ff" size="34" required>
+        <input id="blockDur" type="number" min="1" placeholder="유지 시간(초, 선택)">
+        <button>차단</button>
+      </form>
+      <h3>현재 차단 목록</h3>
+      <table><thead><tr><th>대상</th><th>이유</th><th>시작</th><th>남은 시간</th><th></th></tr></thead>
+      <tbody id="blockedRows"></tbody></table>
+    </div>
+  </section>
+
+  <section id="tab-rules" hidden>
+    <div class="panel"><h3>현재 탐지 규칙 <small>(읽기 전용 — 수정은 config.json)</small></h3><div id="rulesBox"></div></div>
+  </section>
+
+  <section id="tab-plugins" hidden>
+    <div id="pluginList"></div>
+  </section>
+</main>
+
+<div id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>

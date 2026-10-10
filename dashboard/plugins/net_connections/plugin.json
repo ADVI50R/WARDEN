@@ -1,0 +1,9 @@
+{
+  "id": "net_connections",
+  "name": "현재 접속 목록",
+  "description": "서버가 열고 있는 포트와 현재 연결(ss)을 보여줍니다.",
+  "kind": "task",
+  "command": ["ss", "-tun", "-a"],
+  "params": [],
+  "timeout_sec": 10
+}

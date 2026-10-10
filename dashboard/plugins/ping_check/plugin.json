@@ -1,0 +1,9 @@
+{
+  "id": "ping_check",
+  "name": "핑 확인",
+  "description": "지정한 IP 로 ping 3번을 보내 연결 상태를 확인합니다.",
+  "kind": "task",
+  "command": ["ping", "-c", "3", "-W", "2", "{host}"],
+  "params": [{"name": "host", "label": "대상 IP", "type": "ip", "default": "192.168.56.20"}],
+  "timeout_sec": 15
+}

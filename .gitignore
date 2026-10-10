@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 logs/
 .venv/
+dashboard/dashboard_config.json
+dashboard/plugins_state.json

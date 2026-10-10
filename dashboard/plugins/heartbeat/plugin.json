@@ -1,0 +1,8 @@
+{
+  "id": "heartbeat",
+  "name": "하트비트 (서비스 예제)",
+  "description": "중지할 때까지 계속 실행되는 '서비스형' 플러그인 예제입니다. 새 플러그인을 만들 때 참고하세요.",
+  "kind": "service",
+  "command": ["{python}", "-u", "./run.py", "{interval}"],
+  "params": [{"name": "interval", "label": "출력 간격(초)", "type": "int", "default": 2, "min": 1, "max": 60}]
+}

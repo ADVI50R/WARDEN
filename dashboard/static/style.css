@@ -1,0 +1,38 @@
+:root{--bg:#0f1720;--panel:#18222e;--line:#2a3746;--text:#e6edf3;--mute:#8b9bb0;--blue:#4aa3ff;--yellow:#f0b429;--red:#ff5c5c;--green:#3fb97a}
+@media (prefers-color-scheme: light){:root{--bg:#f3f5f8;--panel:#fff;--line:#dde3ea;--text:#17202b;--mute:#5d6b7c}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 "Malgun Gothic","Noto Sans KR",system-ui,sans-serif}
+header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+h1{font-size:18px;margin:0}h3{margin:0 0 10px;font-size:15px}small{color:var(--mute);font-weight:400}
+nav{display:flex;gap:4px;flex:1;flex-wrap:wrap}
+nav button{background:none;border:0;color:var(--mute);padding:6px 12px;border-radius:6px;cursor:pointer;font:inherit}
+nav button.active{background:var(--bg);color:var(--text)}
+.pill{padding:2px 10px;border-radius:99px;background:var(--bg);font-size:13px}
+.pill.ok{color:var(--green)}.pill.bad{color:var(--red)}
+main{padding:16px 20px;max-width:1300px;margin:auto}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;overflow-x:auto}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.card .k{color:var(--mute);font-size:13px}.card .v{font-size:24px;font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:800px){.grid2{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mute);font-weight:500}
+.sev{font-weight:600}.sev.info{color:var(--blue)}.sev.warning{color:var(--yellow)}.sev.critical{color:var(--red)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+input,select,button{font:inherit;padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+button{cursor:pointer}button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+button.danger{background:var(--red);border-color:var(--red);color:#fff}
+.hbar{display:flex;align-items:center;gap:8px;margin:5px 0}.hbar .n{width:110px;font-size:13px;color:var(--mute)}
+.hbar .b{height:14px;background:var(--blue);border-radius:3px;min-width:2px}.hbar .c{font-size:13px}
+.plugin h3{display:flex;gap:8px;align-items:center}.plugin p{margin:0 0 8px;color:var(--mute)}
+.tag{font-size:12px;padding:1px 8px;border-radius:99px;background:var(--bg);color:var(--mute);font-weight:400}
+pre{background:#0a0f15;color:#cfe3ff;padding:10px;border-radius:6px;max-height:280px;overflow:auto;font:13px/1.45 Consolas,monospace;white-space:pre-wrap;margin:8px 0 0}
+#login{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:5}
+#login[hidden]{display:none}
+#loginForm{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:24px;width:min(380px,92vw);display:grid;gap:10px}
+.err{color:var(--red);margin:0}
+#toast{position:fixed;bottom:18px;right:18px;background:var(--panel);border:1px solid var(--line);padding:10px 14px;border-radius:8px;display:none;max-width:80vw}
+code{background:var(--bg);padding:1px 5px;border-radius:4px}
+[hidden]{display:none!important}
