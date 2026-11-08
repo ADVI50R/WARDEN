@@ -1,0 +1,28 @@
+{
+  "id": "web_port_sweep",
+  "tags": [
+    "웹",
+    "정찰"
+  ],
+  "name": "웹 관리 포트 훑기",
+  "description": "관리 화면에 자주 쓰는 포트 여러 곳을 짧게 훑으면 알림",
+  "enabled": true,
+  "protocol": "tcp",
+  "dst_ports": [
+    8000,
+    8008,
+    8080,
+    8081,
+    8443,
+    8888,
+    9000,
+    9090,
+    10000
+  ],
+  "tcp_flags": "syn",
+  "count": 4,
+  "window_sec": 30,
+  "distinct": "dst_port",
+  "severity": "warning",
+  "block": false
+}

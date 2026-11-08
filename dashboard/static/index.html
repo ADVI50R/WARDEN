@@ -17,50 +17,296 @@
   </form>
 </div>
 
-<main class="page">
-  <h1>🛡️ 보안 정책 자동화 대시보드 (Guardian)</h1>
-  <p class="caption">관제 서버(Kali Linux)의 Guardian 탐지·차단 상태를 실시간으로 보여주는 대시보드입니다.
-    <span id="conn" class="conn">연결 중…</span></p>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="메뉴">
+  <div class="brand">🛡️ Guardian</div>
+  <a class="navitem" href="#overview" data-view="overview"><span class="ico">📊</span><span>개요</span><span class="navbadge" id="newBadge" hidden></span></a>
+  <a class="navitem" href="#packets" data-view="packets"><span class="ico">🔍</span><span>패킷 보기</span></a>
+  <a class="navitem" href="#policy" data-view="policy"><span class="ico">⚙️</span><span>보안 정책</span></a>
+  <a class="navitem" href="#tools" data-view="tools"><span class="ico">🧰</span><span>도구</span></a>
+  <a class="navitem" href="#rules" data-view="rules"><span class="ico">🧪</span><span>탐지 규칙</span></a>
+  <a class="navitem" href="#report" data-view="report"><span class="ico">📄</span><span>점검·보고서</span></a>
+  <div class="sidefoot">
+    <span id="modeBadge" class="conn"></span>
+    <span id="conn" class="conn">연결 중…</span>
+    <span id="lastOk" class="caption"></span>
+    <button class="btn sm" id="soundBtn" type="button" title="모든 알림 소리를 한꺼번에 켜고 끔 (규칙별 설정은 탐지 규칙의 ⚙ 에서)">🔕 소리 끔</button>
+    <button class="btn sm" id="logoutBtn" type="button">로그아웃</button>
+  </div>
+</nav>
 
+<main class="page">
+  <h1>🛡️ 보안 정책 자동화 대시보드</h1>
+  <div id="downBanner" class="alert error" role="alert" hidden></div>
+
+<section class="view" data-view="overview">
   <h2>📊 시스템 보안 상태 지표</h2>
   <div class="metrics" id="metrics"></div>
   <hr>
 
   <h2>🚨 실시간 공격 탐지 로그</h2>
   <div class="field-row">
-    <label>이벤트 유형 <select id="typeFilter"><option value="">전체</option></select></label>
+    <div class="rulebar">
+      <label class="sortbox">이벤트 유형 <select id="typeFilter"><option value="">전체</option></select></label>
+      <select id="evSev"><option value="">위험도: 전체</option><option value="info">Low</option><option value="warning">Medium</option><option value="critical">Critical</option></select>
+      <input id="evIp" class="txt" type="search" placeholder="🔍 IP·상세 검색" autocomplete="off">
+      <button class="btn sm" id="evCsv" type="button">⬇ CSV 받기</button>
+    </div>
   </div>
   <div class="df"><table>
-    <thead><tr><th>시간</th><th>출발지 IP</th><th>대상</th><th>이벤트</th><th>위험도</th><th>상태</th><th>상세</th></tr></thead>
+    <thead><tr><th>시간</th><th>출발지 IP</th><th>대상</th><th>이벤트</th><th>위험도</th><th>상태</th><th>상세</th><th>분석</th></tr></thead>
     <tbody id="eventRows"></tbody>
   </table></div>
-  <hr>
+</section>
 
+<section class="view" data-view="packets" hidden>
+  <h2>🔍 패킷 보기 (실시간)</h2>
+  <p>서버를 지나가는 패킷의 헤더 요약을 와이어샤크처럼 보여줍니다 (내용은 저장하지 않음). 핑은 요청과 응답이 둘 다 보입니다.
+    PCAP 으로 받으면 헤더까지만 들어 있어 Wireshark 에 "Packet size limited during capture" 로 표시되는 것이 정상입니다.</p>
+  <div class="rulebar">
+    <select id="pkProto"><option value="">프로토콜: 전체</option><option value="ICMP">ICMP (핑)</option><option value="TCP">TCP</option>
+      <option value="UDP">UDP</option><option value="ARP">ARP</option></select>
+    <input id="pkIp" class="txt" type="search" placeholder="🔍 IP 검색 (앞부분만 써도 됨, 예: 192.168.56.2)" autocomplete="off">
+    <label class="inline" title="SSH 공격을 볼 때는 끄세요"><input id="pkHide" type="checkbox"> 대시보드·SSH 통신 숨기기</label>
+    <button class="btn sm" id="pkPause" type="button">⏸ 일시정지</button>
+    <button class="btn sm" id="pkClear" type="button">🧹 화면 지우기</button>
+    <button class="btn sm" id="pkPcap" type="button" title="지금 조건(프로토콜·IP·숨기기)에 맞는 기록을 Wireshark 로 열 수 있는 .pcap 파일로 받습니다">💾 PCAP 저장 (Wireshark)</button>
+    <span class="caption" id="pkCount"></span>
+  </div>
+  <div id="pkNotice"></div>
+  <div class="df"><table>
+    <thead><tr><th>번호</th><th>시간</th><th>방향</th><th>출발지</th><th>도착지</th><th>프로토콜</th><th>길이</th><th>정보</th></tr></thead>
+    <tbody id="pkRows"></tbody>
+  </table></div>
+</section>
+
+<section class="view" data-view="policy" hidden>
   <h2>⚙️ 보안 정책 제어</h2>
   <p>탐지된 위협에 대해 Guardian 방화벽(iptables) 차단을 직접 적용하거나 해제할 수 있습니다.</p>
   <form id="blockForm">
     <label class="lbl" for="blockTarget">차단할 공격자 IP 주소 (또는 mac:aa:bb:cc:dd:ee:ff)</label>
     <input id="blockTarget" class="txt" required>
-    <label class="lbl" for="blockDur">차단 유지 시간(초, 비우면 기본값)</label>
-    <input id="blockDur" class="txt" type="number" min="1">
+    <span class="lbl">차단 기간 (직접 지정)</span>
+    <div class="dur" id="durBox">
+      <label><input id="durDay" class="txt num" type="number" min="0" max="3650" value="0"> 일</label>
+      <label><input id="durHour" class="txt num" type="number" min="0" max="23" value="0"> 시간</label>
+      <label><input id="durMin" class="txt num" type="number" min="0" max="59" value="5"> 분</label>
+      <label class="chk"><input id="blockPerm" type="checkbox"> 영구 차단 (직접 해제할 때까지)</label>
+    </div>
+    <label class="lbl" for="blockNote">메모 (선택, 200자까지)</label>
+    <input id="blockNote" class="txt" maxlength="200" placeholder="예: 시연 중 포트스캔 공격자">
     <button class="btn">🚨 방화벽 차단 정책 적용</button>
   </form>
   <div id="blockMsg"></div>
 
   <h3>현재 차단 목록</h3>
+  <div id="blockedNote"></div>
   <div class="df"><table>
-    <thead><tr><th>대상</th><th>이유</th><th>시작</th><th>남은 시간</th><th></th></tr></thead>
+    <thead><tr><th>대상</th><th>이유</th><th>시작</th><th>남은 시간</th><th>메모</th><th></th></tr></thead>
     <tbody id="blockedRows"></tbody>
   </table></div>
-  <hr>
+  <p class="caption">🚨 차단을 한꺼번에 모두 풀어야 할 때(긴급 전체 해제)는 보안 서버 터미널에서 <code>gunblock</code> 을 실행하세요.
+    토큰이 새더라도 방어를 한 번에 풀 수 없도록 대시보드에는 이 기능을 넣지 않았습니다.</p>
 
-  <h2>🧩 보안 플러그인</h2>
-  <p>보안 스크립트·앱을 <code>dashboard/plugins/</code> 폴더에 추가하면 여기에 나타납니다.</p>
-  <div id="pluginList"></div>
-  <hr>
+  <h3>📒 IP별 공격 기록</h3>
+  <p class="caption">같은 IP 의 알림은 30초 동안 한 번만 기록되므로, 횟수는 "탐지된 알림 수" 입니다.</p>
+  <div class="df"><table>
+    <thead><tr><th>IP / MAC</th><th>탐지 횟수</th><th>방화벽 차단</th><th>이유별 횟수</th><th>처음</th><th>마지막</th><th>메모</th></tr></thead>
+    <tbody id="historyRows"></tbody>
+  </table></div>
 
-  <details class="expander"><summary>🔧 탐지 규칙 보기 (읽기 전용)</summary><div id="rulesBox"></div></details>
+  <h3>🤝 화이트리스트 <span class="caption">— 자동 차단하지 않는 주소 (탐지·알림은 됩니다). 🔒 는 서버 자신의 주소라 뺄 수 없습니다</span></h3>
+  <form id="whitelistForm" class="rulebar">
+    <input id="wlTarget" class="txt" required placeholder="추가할 IP 또는 mac:aa:bb:cc:dd:ee:ff" autocomplete="off">
+    <button class="btn sm">➕ 추가</button>
+  </form>
+  <div id="whitelistMsg"></div>
+  <div id="whitelistBox"></div>
+
+  <details class="expander" id="auditBox"><summary>📝 감사 기록 (누가 언제 무엇을 조작했나)</summary>
+    <div><div class="df"><table>
+      <thead><tr><th>시간</th><th>접속 IP</th><th>작업</th><th>내용</th><th>결과</th></tr></thead>
+      <tbody id="auditRows"></tbody>
+    </table></div></div>
+  </details>
+</section>
+
+<section class="view" data-view="tools" hidden>
+  <h2>🧰 도구</h2>
+  <p>보안 스크립트·앱(범용 도구)을 수동으로 실행/중지하는 곳입니다. 아래 "도구 올리기"로 올린 뒤 관리자가 서버에서 승인하면 3초 안에 카드로 나타납니다.
+    "탐지 규칙" 메뉴의 <b>플러그인 방식</b> 규칙과는 다른 것입니다 (그쪽은 Guardian 이 주기적으로 자동 실행).
+    <button class="btn sm" id="pluginRescan" type="button">🔄 지금 다시 찾기</button></p>
+  <div class="rulebar">
+    <input id="toolSearch" class="txt" type="search" placeholder="🔍 도구 이름·설명·태그 검색 (예: 핑, 포트공격)" autocomplete="off">
+    <span class="caption" id="toolCount"></span>
+  </div>
+  <div class="ptags" id="toolTags"></div>
+  <div id="pluginErrors"></div>
+  <div id="pluginList" class="cards"></div>
+  <details class="expander" id="upBox"><summary>📤 도구 올리기 (승인 대기)</summary>
+    <div>
+      <p>도구는 여기서 <b>올리기</b>로만 추가합니다. 스크립트를 올려도 <b>바로 실행되지 않습니다</b>. 파일은 '승인 대기' 칸에만 저장되고, 관리자가 <b>보안 서버 터미널</b>에서 내용을 읽어 보고 승인해야 위 카드 목록에 나타납니다. 대시보드에는 승인 버튼이 없습니다 (토큰이 새어도 올리는 것만으로는 실행되지 않게 하려는 장치).</p>
+      <p class="caption">올릴 파일: <code>plugin.json</code> 과 스크립트(<code>.py</code> / <code>.sh</code>) 를 함께 선택하세요 (한 번에 6개, 파일당 64KB 까지). 어떻게 구성해야 하는지는 안내 PDF를 받아서 보세요.</p>
+      <div class="rulebar">
+        <a class="btn sm" href="guide_tool.pdf" download>📄 구성 안내 PDF 받기</a>
+        <input type="file" id="upFiles" multiple accept=".json,.py,.sh">
+        <button class="btn sm" id="upSend" type="button">⬆ 올리기</button>
+      </div>
+      <div id="upMsg"></div>
+      <h4 class="subh">승인 대기 중</h4>
+      <div id="upList"></div>
+    </div>
+  </details>
+</section>
+
+<section class="view" data-view="rules" hidden>
+  <h2>🧪 탐지 규칙</h2>
+  <p>Guardian 이 탐지하는 모든 규칙입니다. 규칙은 보안 서버의 <code>rules/</code> 폴더에 파일 하나씩(<code>.json</code>) 들어 있고, 아래 양식으로 추가하거나
+    파일을 넣고 고치면 재시작 없이 5초 안에 적용됩니다. 켜기/끄기/삭제도 바로 적용됩니다. 규칙은 작동 방식에 따라 둘로 나뉩니다:
+    <b>🔥 방화벽 방식</b>(Guardian 이 패킷을 직접 보고 판정)과 <b>🧩 플러그인 방식</b>(주기적으로 스크립트를 실행해 그 판정을 따름)입니다.</p>
+  <div id="ruleErrors"></div>
+  <div id="ruleNotice"></div>
+  <div class="rulebar">
+    <input id="ruleSearch" class="txt" type="search" placeholder="🔍 규칙 이름 또는 ID 검색 (예: 포트, port_scan)" autocomplete="off">
+    <label class="sortbox">정렬
+      <select id="ruleSort"><option value="sev" selected>위험도순 (높은 것 먼저)</option><option value="name">글자순 (가나다)</option>
+        <option value="block">차단 여부 (차단 먼저)</option><option value="state">상태 (켜짐 먼저)</option></select>
+    </label>
+    <button class="btn sm" id="ruleRev" type="button" aria-pressed="false" title="현재 정렬을 거꾸로">⇅ 역순</button>
+    <button class="btn sm" id="ruleFilterReset" type="button">초기화</button>
+    <span class="caption" id="ruleCount"></span>
+  </div>
+  <details class="expander filterbox"><summary id="ruleFilterSummary">🔽 필터</summary>
+    <div class="filters">
+      <select id="ruleSev"><option value="">위험도: 전체</option><option value="info">Low</option><option value="warning">Medium</option><option value="critical">Critical</option></select>
+      <select id="ruleBlock"><option value="">차단 여부: 전체</option><option value="block">차단</option><option value="alert">알림만</option></select>
+      <select id="ruleState"><option value="">상태: 전체</option><option value="on">켜짐</option><option value="off">꺼짐</option></select>
+    </div>
+  </details>
+
+  <div class="ptags" id="ruleTags"></div>
+
+  <h3 class="subh">🔥 방화벽 방식 <span class="caption">— 패킷을 직접 보고 판정 (기본 탐지기·직접 만든 규칙)</span></h3>
+  <div class="cards" id="ruleRows"></div>
+
+  <h3 class="subh">🧩 플러그인 방식 <span class="caption">— 주기적으로 스크립트를 실행해 그 판정을 따름 (rules/ 안의 전용 스크립트)</span></h3>
+  <div class="cards" id="scriptRuleRows"></div>
+
+  <button class="btn" id="ruleAddBtn" type="button">➕ 새 규칙 추가</button>
+  <dialog id="ruleTypeDialog">
+    <h3>어떤 방식으로 만들까요?</h3>
+    <p class="caption">만든 뒤에는 방식을 바꿀 수 없습니다 (삭제하고 다시 만들어야 합니다).</p>
+    <div class="dlgbtns">
+      <button class="btn" id="chooseFwBtn" type="button">🔥 방화벽 방식<br><span class="caption">패킷 조건(포트·횟수 등)으로 직접 탐지</span></button>
+      <button class="btn" id="chooseScriptBtn" type="button">🧩 플러그인 방식<br><span class="caption">스크립트를 올리고 서버에서 승인</span></button>
+      <button class="btn" id="chooseCancelBtn" type="button">취소</button>
+    </div>
+  </dialog>
+
+  <details class="expander" id="fwRuleBox">
+    <summary>🔥 방화벽 방식 규칙 추가</summary>
+    <form id="ruleForm" class="ruleform">
+      <label>규칙 ID (영소문자·숫자·밑줄)<input id="rId" class="txt" required pattern="[a-z0-9_]{1,40}" placeholder="telnet_probe"></label>
+      <label>이름<input id="rName" class="txt" maxlength="60" placeholder="텔넷 접속 시도"></label>
+      <label>태그 (선택, 공백·쉼표로 구분, 6개까지)<input id="rTags" class="txt" placeholder="#텔넷 #포트공격"></label>
+      <label class="wide">설명 (선택)<textarea id="rDesc" class="txt desc" maxlength="200" rows="1" placeholder="이 규칙이 무엇을 잡는지"></textarea></label>
+      <label>프로토콜<select id="rProto"><option>tcp</option><option>udp</option><option>icmp</option><option>any</option></select></label>
+      <label>대상 포트 (쉼표로 구분, 비우면 전체)<input id="rPorts" class="txt" placeholder="23, 2323"></label>
+      <label>TCP 조건<select id="rFlags"><option value="syn">새 연결 시도(SYN)만</option><option value="any">모든 TCP 패킷</option></select></label>
+      <label>횟수 (이 이상이면 탐지)<input id="rCount" class="txt num" type="number" min="1" value="5"></label>
+      <label>기간(초)<input id="rWindow" class="txt num" type="number" min="1" max="3600" value="30"></label>
+      <label>세는 방법<select id="rDistinct"><option value="none">패킷 수</option><option value="dst_port">서로 다른 포트 수</option></select></label>
+      <label>위험도<select id="rSev"><option value="info">Low</option><option value="warning" selected>Medium</option><option value="critical">Critical</option></select></label>
+      <div class="wide" id="rBlockBox"></div>
+      <button class="btn primary">규칙 저장</button>
+    </form>
+    <div id="ruleMsg"></div>
+  </details>
+
+  <details class="expander" id="ruleUpBox">
+    <summary>📤 플러그인 방식 규칙 올리기 (승인 대기)</summary>
+    <div>
+      <p>플러그인 방식 규칙은 <b>올리기</b>로만 추가합니다. 규칙 설정 파일(<code>rule.json</code>)과 판정 스크립트(<code>.py</code> / <code>.sh</code>)를 함께 올리세요. 올려도 <b>바로 적용되지 않습니다</b>:
+        '승인 대기' 칸에만 저장되고, 관리자가 <b>보안 서버 터미널</b>에서 내용을 읽어 보고 승인하면 <code>rules/</code> 에 <b>꺼진 상태</b>로 설치됩니다. 그다음 위 카드에서 직접 '켜기'를 누릅니다. 대시보드에는 승인 버튼이 없습니다.</p>
+      <p class="caption">한 번에 6개, 파일당 64KB 까지. 어떻게 구성해야 하는지(rule.json 항목, 스크립트가 내보낼 출력 형식)는 안내 PDF를 받아서 보세요.</p>
+      <div class="rulebar">
+        <a class="btn sm" href="guide_rule.pdf" download>📄 구성 안내 PDF 받기</a>
+        <input type="file" id="ruleUpFiles" multiple accept=".json,.py,.sh">
+        <button class="btn sm" id="ruleUpSend" type="button">⬆ 올리기</button>
+      </div>
+      <div id="ruleUpMsg"></div>
+      <h4 class="subh">승인 대기 중</h4>
+      <div id="ruleUpList"></div>
+    </div>
+  </details>
+  <details class="expander"><summary>📝 규칙 변경 기록</summary><div id="ruleLogBox"></div></details>
+</section>
+<section class="view" data-view="report" hidden>
+  <h2>📄 점검·보고서</h2>
+  <div class="rulebar noprint">
+    <button class="btn sm" id="repReload" type="button">🔄 다시 만들기</button>
+    <button class="btn sm" id="repPrint" type="button">🖨 인쇄 / PDF 저장</button>
+    <button class="btn sm" id="repCsv" type="button">⬇ CSV 받기</button>
+    <span class="caption" id="repAt"></span>
+  </div>
+  <div class="noprint"><h3>✅ 시연 전 점검</h3><ul class="checks" id="preflight"></ul></div>
+  <h3>요약</h3><div class="metrics" id="repSummary"></div>
+  <h3>📈 최근 24시간 탐지 수</h3><div id="chartTime"></div>
+  <div class="chartrow">
+    <div><h3>공격자 순위 (탐지 수)</h3><div id="chartIps"></div></div>
+    <div><h3>유형별 탐지 수</h3><div id="chartTypes"></div></div>
+  </div>
+  <h3>탐지 규칙</h3>
+  <div class="df print-full"><table><thead><tr><th>규칙</th><th>상태</th><th>위험도</th><th>대응</th><th>탐지</th><th>마지막</th></tr></thead><tbody id="repRules"></tbody></table></div>
+  <h3>탐지 기록 (최근 1000건까지)</h3>
+  <div class="df print-full"><table><thead><tr><th>시간</th><th>출발지</th><th>이벤트</th><th>위험도</th><th>상태</th><th>상세</th></tr></thead><tbody id="repEvents"></tbody></table></div>
+</section>
 </main>
+</div>
+<div id="toasts" aria-live="polite"></div>
+<dialog id="tlDialog">
+  <h3 id="tlTitle"></h3>
+  <div id="tlBody"></div>
+  <div class="dlgbtns">
+    <button class="btn" id="tlBlock" type="button">🚫 이 대상 차단하러 가기</button>
+    <button class="btn primary" id="tlClose" type="button">닫기</button>
+  </div>
+</dialog>
+<dialog id="pluginDialog">
+  <h3 id="pdTitle"></h3>
+  <div class="ptags" id="pdTags"></div>
+  <p class="caption" id="pdDesc"></p>
+  <div class="row" id="pdParams"></div>
+  <div class="row" id="pdActions"></div>
+  <div id="pdStatus" class="caption"></div>
+  <div id="pdOut"></div>
+  <div class="dlgbtns"><button class="btn primary" id="pdClose" type="button">닫기</button></div>
+</dialog>
+<dialog id="evDialog">
+  <h3 id="evTitle">ℹ️ 침입 상세 분석</h3>
+  <div id="evBody"></div>
+  <div class="dlgbtns">
+    <button class="btn" id="evRefresh" type="button">🔄 다시 분석</button>
+    <button class="btn" id="evPcap" type="button" hidden title="이 공격의 출발지가 탐지 직전에 보낸 패킷을 .pcap 파일로 받습니다">📦 관련 패킷 (PCAP)</button>
+    <button class="btn" id="evBlockGo" type="button" hidden>🚫 이 IP 차단하러 가기</button>
+    <button class="btn primary" id="evClose" type="button">닫기</button>
+  </div>
+</dialog>
+<dialog id="editDialog">
+  <h3>✏️ 규칙 수정</h3>
+  <form id="editForm" method="dialog">
+    <div id="editFields" class="editgrid"></div>
+    <div id="editNotes"></div>
+    <div id="editMsg"></div>
+    <div class="dlgbtns"><button class="btn" id="editCancel" type="button">취소</button><button class="btn primary">저장</button></div>
+  </form>
+</dialog>
+<dialog id="delDialog">
+  <h3>🗑️ 규칙을 삭제할까요?</h3>
+  <dl id="delBody"></dl>
+  <div id="delNotes"></div>
+  <div class="dlgbtns"><button class="btn" id="delCancel" type="button">취소</button><button class="btn primary" id="delOk" type="button">삭제</button></div>
+</dialog>
 <script src="app.js"></script>
 </body>
 </html>

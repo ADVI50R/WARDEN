@@ -1,0 +1,10 @@
+{
+  "id": "arp_spoof",
+  "detector": "arp_spoof",
+  "tags": ["ARP", "중간자공격"],
+  "name": "ARP 스푸핑",
+  "description": "같은 IP 의 MAC 주소를 속여 통신을 가로채려는 공격",
+  "enabled": true,
+  "severity": "critical",
+  "block": true
+}

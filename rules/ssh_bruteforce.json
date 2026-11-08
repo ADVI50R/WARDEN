@@ -1,0 +1,15 @@
+{
+  "id": "ssh_bruteforce",
+  "detector": "ssh_bruteforce",
+  "tags": ["SSH", "무차별대입", "계정탈취"],
+  "name": "SSH 무차별 대입",
+  "description": "SSH 로그인을 계속 시도해 비밀번호를 알아내려는 공격",
+  "enabled": true,
+  "severity": "critical",
+  "block": true,
+  "ports": [
+    22
+  ],
+  "window_sec": 60,
+  "max_attempts": 10
+}

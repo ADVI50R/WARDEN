@@ -1,0 +1,20 @@
+{
+  "id": "rdp_probe",
+  "tags": [
+    "RDP",
+    "포트공격"
+  ],
+  "name": "원격 데스크톱 접근",
+  "description": "3389번 포트로 접속을 반복하면 알림",
+  "enabled": true,
+  "protocol": "tcp",
+  "dst_ports": [
+    3389
+  ],
+  "tcp_flags": "syn",
+  "count": 5,
+  "window_sec": 60,
+  "distinct": "none",
+  "severity": "warning",
+  "block": false
+}

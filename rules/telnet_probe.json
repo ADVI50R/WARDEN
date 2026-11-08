@@ -1,0 +1,15 @@
+{
+  "id": "telnet_probe",
+  "tags": ["텔넷", "포트공격", "예제"],
+  "name": "텔넷 접속 시도",
+  "description": "예제 규칙: 23번 포트로 새 연결을 반복해서 시도하면 알림 (꺼진 상태로 제공)",
+  "enabled": false,
+  "protocol": "tcp",
+  "dst_ports": [23],
+  "tcp_flags": "syn",
+  "count": 5,
+  "window_sec": 30,
+  "distinct": "none",
+  "severity": "warning",
+  "block": false
+}

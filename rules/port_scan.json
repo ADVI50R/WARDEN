@@ -1,0 +1,12 @@
+{
+  "id": "port_scan",
+  "detector": "port_scan",
+  "tags": ["포트스캔", "정찰"],
+  "name": "포트 스캔",
+  "description": "짧은 시간에 여러 포트를 두드려 열린 문을 찾는 행위 (nmap 등)",
+  "enabled": true,
+  "severity": "warning",
+  "block": true,
+  "window_sec": 10,
+  "distinct_ports": 20
+}

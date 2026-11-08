@@ -1,0 +1,21 @@
+{
+  "id": "smb_probe",
+  "tags": [
+    "SMB",
+    "포트공격"
+  ],
+  "name": "윈도우 파일 공유 접근",
+  "description": "139·445번 포트로 접속을 반복하면 알림 (랜섬웨어 확산 경로)",
+  "enabled": true,
+  "protocol": "tcp",
+  "dst_ports": [
+    139,
+    445
+  ],
+  "tcp_flags": "syn",
+  "count": 5,
+  "window_sec": 60,
+  "distinct": "none",
+  "severity": "warning",
+  "block": false
+}

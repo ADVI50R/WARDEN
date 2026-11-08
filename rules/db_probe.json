@@ -1,0 +1,24 @@
+{
+  "id": "db_probe",
+  "tags": [
+    "DB",
+    "포트공격"
+  ],
+  "name": "데이터베이스 접근",
+  "description": "MySQL·PostgreSQL·MSSQL·Redis·MongoDB 포트로 접속을 반복하면 알림",
+  "enabled": true,
+  "protocol": "tcp",
+  "dst_ports": [
+    3306,
+    5432,
+    1433,
+    6379,
+    27017
+  ],
+  "tcp_flags": "syn",
+  "count": 5,
+  "window_sec": 60,
+  "distinct": "none",
+  "severity": "warning",
+  "block": false
+}

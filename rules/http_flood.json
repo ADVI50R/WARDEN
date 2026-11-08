@@ -1,0 +1,22 @@
+{
+  "id": "http_flood",
+  "tags": [
+    "웹",
+    "플러드",
+    "DoS"
+  ],
+  "name": "웹 연결 폭주",
+  "description": "80·443번 포트로 새 연결이 몰리면 알림",
+  "enabled": true,
+  "protocol": "tcp",
+  "dst_ports": [
+    80,
+    443
+  ],
+  "tcp_flags": "syn",
+  "count": 100,
+  "window_sec": 10,
+  "distinct": "none",
+  "severity": "warning",
+  "block": false
+}

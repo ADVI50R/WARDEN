@@ -1,0 +1,20 @@
+{
+  "id": "ftp_bruteforce",
+  "tags": [
+    "FTP",
+    "무차별대입"
+  ],
+  "name": "FTP 무차별 대입",
+  "description": "21번 포트로 접속을 반복하면 알림",
+  "enabled": true,
+  "protocol": "tcp",
+  "dst_ports": [
+    21
+  ],
+  "tcp_flags": "syn",
+  "count": 10,
+  "window_sec": 60,
+  "distinct": "none",
+  "severity": "warning",
+  "block": false
+}

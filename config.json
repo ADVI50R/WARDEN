@@ -1,24 +1,27 @@
 {
   "interface": "eth0",
   "dry_run": true,
-  "whitelist": ["127.0.0.1"],
+  "whitelist": [
+    "127.0.0.1",
+    "192.168.57.1"
+  ],
   "block_duration_sec": 300,
+  "repeat_block": {
+    "enabled": true,
+    "window_sec": 86400,
+    "steps_sec": [300, 1800, 7200]
+  },
   "alert_cooldown_sec": 30,
   "enable_syncookies": true,
   "log_file": "logs/events.jsonl",
-
+  "packet_view": {
+    "enabled": true,
+    "buffer": 2000,
+    "max_per_sec": 1000
+  },
   "api": {
     "enabled": true,
     "host": "127.0.0.1",
     "port": 8000
-  },
-
-  "rules": {
-    "port_scan":      { "enabled": true, "window_sec": 10, "distinct_ports": 20, "block": true },
-    "syn_flood":      { "enabled": true, "window_sec": 5,  "max_syn": 200, "global_max_syn": 1000, "global_min_sources": 10, "block": true },
-    "icmp_flood":     { "enabled": true, "window_sec": 5,  "max_packets": 50, "block": true },
-    "ssh_bruteforce": { "enabled": true, "ports": [22], "window_sec": 60, "max_attempts": 10, "block": true },
-    "arp_spoof":      { "enabled": true, "block": true },
-    "exfiltration":   { "enabled": true, "window_sec": 60, "max_bytes": 50000000 }
   }
 }

@@ -1,0 +1,22 @@
+{
+  "id": "vnc_probe",
+  "tags": [
+    "VNC",
+    "포트공격"
+  ],
+  "name": "VNC 원격 제어 접근",
+  "description": "5900번대 포트로 접속을 반복하면 알림",
+  "enabled": true,
+  "protocol": "tcp",
+  "dst_ports": [
+    5900,
+    5901,
+    5902
+  ],
+  "tcp_flags": "syn",
+  "count": 5,
+  "window_sec": 60,
+  "distinct": "none",
+  "severity": "warning",
+  "block": false
+}

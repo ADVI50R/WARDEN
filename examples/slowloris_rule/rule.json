@@ -1,0 +1,12 @@
+{
+  "id": "slowloris",
+  "detector": "script",
+  "name": "슬로로리스 (연결 고갈 공격)",
+  "description": "한 IP가 서버 연결을 20개 이상 동시에 붙잡고 있으면 탐지. 패킷이 적어 개수 규칙으로는 못 잡는 느린 서비스 거부 공격",
+  "tags": ["서비스거부", "슬로로리스", "느린공격"],
+  "command": ["./slowloris_check.py", "--min-conn", "20"],
+  "interval_sec": 10,
+  "timeout_sec": 5,
+  "severity": "critical",
+  "block": true
+}

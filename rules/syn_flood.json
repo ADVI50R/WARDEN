@@ -1,0 +1,14 @@
+{
+  "id": "syn_flood",
+  "detector": "syn_flood",
+  "tags": ["플러드", "DoS"],
+  "name": "SYN 플러드",
+  "description": "연결 요청(SYN)을 쏟아부어 서버를 마비시키는 공격. 출발지를 위조한 경우는 합계로 따로 감시",
+  "enabled": true,
+  "severity": "critical",
+  "block": true,
+  "window_sec": 5,
+  "max_syn": 200,
+  "global_max_syn": 1000,
+  "global_min_sources": 10
+}

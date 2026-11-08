@@ -1,4 +1,33 @@
-# Guardian – 실습용 네트워크 관제/방어 도구 (초안)
+# WARDEN — Watch, Alert, Respond, Defend, Explain, Notify
+
+실습용 리눅스 네트워크 관제·방어 도구. 프로그램 이름은 **Guardian** (`guardian.py`) 입니다.
+
+| | 하는 일 |
+|---|---|
+| **W**atch | scapy 로 지나가는 패킷을 감시 (패킷 보기, PCAP 내보내기) |
+| **A**lert | 포트 스캔·플러드·SSH 무차별 대입·ARP 변조·유출 등 규칙으로 탐지 |
+| **R**espond | iptables 로 자동 차단, 반복 공격자는 더 길게 (dry-run 으로 시험 가능) |
+| **D**efend | 화이트리스트, 업로드 코드는 터미널 승인 후에만 실행, 감사 기록 |
+| **E**xplain | 탐지마다 "정보" 분석: 어디서 · 무엇을 · 영향 · 대응 결과 · 권고 |
+| **N**otify | 웹 대시보드의 실시간 알림·보고서·CSV |
+
+## 0. 빠른 설치 (GitHub 에서 받아 새 서버에 설치)
+학교 실습 컴퓨터에 접속할 수 없어도, 칼리(데비안 계열)나 록키(레드햇 계열) 리눅스 VM 만 있으면 이 저장소로 다시 설치해 시연할 수 있습니다.
+
+1. **인터넷 되는 PC 에서 받기** (비공개 저장소라 GitHub 로그인 필요)
+   - 웹: 저장소 → `Code` → `Download ZIP`
+   - 또는 `git clone https://github.com/<계정>/<저장소>.git`
+2. **보안 서버 VM 으로 옮기기**: 공유 폴더·USB 등으로 `guardian/` 폴더를 서버 VM 에 복사 (실습망은 인터넷이 없어도 됨. 처음 설치 때 `python3-scapy` 가 없으면 인터넷이 잠깐 필요)
+3. **설치**: 서버 VM 에서
+   ```bash
+   cd guardian
+   sudo python3 setup.py
+   ```
+   화면에서 감시 인터페이스·대시보드 주소·관리 PC IP 를 고르고, 부팅 때 자동으로 켜려면 "자동 시작 서비스"를 켭니다. 끝나면 대시보드 주소와 로그인 토큰이 화면에 나옵니다.
+4. **확인**: `gstatus` (켜짐·모드·주소), 브라우저로 대시보드 접속
+5. **시연 공격**: 공격자 VM 에서 `attack_test_guide.md` 의 명령 (같은 내부 네트워크에 둘 것, 아래 2번 참고)
+
+제거는 `sudo python3 uninstall.py` (백업 후 삭제). 대시보드 사용법은 `dashboard/README.md`.
 
 ## 1. 구성
 
@@ -46,7 +75,7 @@ cd guardian
 sudo python3 guardian.py
 ```
 
-처음에는 `"dry_run": true` 상태로 **탐지만** 되는지 확인하고, 잘 되면 `false` 로 바꿔서 실제 차단을 테스트하세요.
+처음에는 `"dry_run": true` 상태로 **탐지만** 되는지 확인하고, 잘 되면 실제 차단을 테스트하세요. `config.json` 을 고치고 재시작하는 대신, 대시보드 "관제 서버 상태" 카드의 슬라이드로 바로 켤 수 있습니다 (재시작 없이 적용, `logs/dry_run_override.json` 에 저장되어 다음 시작에도 유지).
 
 ## 4. 공격자 VM에서 테스트해 보기
 
@@ -73,9 +102,14 @@ sudo python3 guardian.py
 |---|---|---|
 | GET | `/api/status` | 가동 시간, 모드, 패킷/이벤트 통계 |
 | GET | `/api/events?limit=50&type=port_scan` | 최근 이벤트 (최신순, type 은 생략 가능) |
-| GET | `/api/blocked` | 현재 차단 목록 + 남은 시간 |
-| GET | `/api/rules` | 현재 탐지 규칙 설정 |
-| POST | `/api/block` | 수동 차단 `{"target":"1.2.3.4","duration_sec":600}` |
+| GET | `/api/blocked` | 현재 차단 목록 + 남은 시간 (영구 차단은 `permanent: true`, 남은 시간 null) + 메모 |
+| GET | `/api/history?limit=50` | IP별 누적 공격 기록 (탐지 횟수, 차단 횟수, 유형별 횟수, 처음/마지막 시각, 메모) |
+| GET | `/api/rules` | 모든 탐지 규칙 목록 + 불러오기 오류 (`rules/*.json`, 형식은 `dashboard/README.md`) |
+| POST | `/api/block` | 수동 차단 `{"target":"1.2.3.4","duration_sec":600}` 또는 영구 `{"target":"1.2.3.4","permanent":true,"note":"메모"}` |
+| POST | `/api/rules` · `/update` · `/enable` · `/delete` | 규칙 저장 `{"rule":{...}}` / 수정 `{"id":..,"rule":{...}}` (바뀌면 꺼짐 상태로 저장) / 켜기끄기 `{"id":..,"enabled":true}` / 삭제 `{"id":..}` (켜져 있으면 먼저 꺼서 삭제) |
+| POST | `/api/dry_run` | 실제 차단 켜기/끄기 `{"dry_run": false}` (켜져 있던 차단 대상에 iptables 규칙을 다시 걸거나 비움) |
+| GET | `/api/rule_changes?limit=50` | 규칙 변경 기록 (켜기/끄기/추가/삭제, `logs/rule_changes.jsonl`). 탐지 이벤트·통계에는 포함되지 않음 |
+| POST | `/api/note` | 메모 저장 `{"target":"1.2.3.4","note":"..."}` (빈 문자열이면 삭제) |
 | POST | `/api/unblock` | 차단 해제 `{"target":"1.2.3.4"}` |
 
 ```bash
@@ -110,13 +144,12 @@ curl -X POST http://127.0.0.1:8000/api/unblock -H "Content-Type: application/jso
 | 항목 | 의미 |
 |---|---|
 | `interface` | 감시할 네트워크 카드 이름 (`ip a` 로 확인) |
-| `dry_run` | `true` = 탐지·기록만 / `false` = 실제 iptables 차단 |
+| `dry_run` | `true` = 탐지·기록만 / `false` = 실제 iptables 차단 (시작할 때의 기본값. 이후 대시보드 슬라이드로 켜면 `logs/dry_run_override.json` 이 이 값보다 우선함) |
 | `whitelist` | 절대 차단하지 않을 IP·MAC (게이트웨이, 본인 PC 등 추가 권장) |
 | `block_duration_sec` | 자동 차단 유지 시간(초) |
 | `alert_cooldown_sec` | 같은 공격이 반복될 때 같은 알림을 다시 띄우기까지 대기 시간 |
 | `api.host` | `127.0.0.1` = 관제 서버 안에서만 접근. 다른 PC에서 대시보드를 볼 거면 `0.0.0.0` |
-| `rules.*.window_sec` | 몇 초 동안 셀지 |
-| `rules.*.block` | 탐지 시 자동 차단할지 |
+| (탐지 규칙) | 탐지 규칙과 임계값은 `rules/` 폴더의 파일로 관리합니다 (`dashboard/README.md` 의 "탐지 규칙" 참고) |
 
 JSON 파일에는 주석(`//`)을 쓸 수 없으니 설명은 이 문서를 보세요. 쉼표 하나만 틀려도 실행이 안 됩니다.
 

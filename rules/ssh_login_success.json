@@ -1,0 +1,12 @@
+{
+  "id": "ssh_login_success",
+  "detector": "ssh_login_success",
+  "tags": ["SSH", "계정탈취", "로그인"],
+  "name": "SSH 로그인 성공 (공격 뒤)",
+  "description": "로그인 실패가 반복되던 IP 에서 SSH 로그인이 성공하면 알림 (sshd 로그를 읽음)",
+  "enabled": true,
+  "severity": "critical",
+  "block": true,
+  "window_sec": 600,
+  "min_failures": 5
+}

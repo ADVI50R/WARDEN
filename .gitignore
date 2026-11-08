@@ -1,6 +1,15 @@
-__pycache__/
-*.pyc
+# runtime data and secrets (never commit)
 logs/
-.venv/
+plugins_pending/
+audit.jsonl
+audit.jsonl.old
+setup_log.txt
 dashboard/dashboard_config.json
 dashboard/plugins_state.json
+*.pcap
+
+# python / editor leftovers
+__pycache__/
+*.pyc
+*.tmp
+.vscode/

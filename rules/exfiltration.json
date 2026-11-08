@@ -1,0 +1,12 @@
+{
+  "id": "exfiltration",
+  "detector": "exfiltration",
+  "tags": ["유출", "데이터"],
+  "name": "대량 데이터 유출",
+  "description": "서버에서 외부로 비정상적으로 많은 데이터가 나가는 상황 (알림만)",
+  "enabled": true,
+  "severity": "warning",
+  "block": false,
+  "window_sec": 60,
+  "max_bytes": 50000000
+}

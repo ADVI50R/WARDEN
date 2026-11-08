@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>Guardian 탐지 규칙(플러그인 방식) 올리기 안내</title>
+<style>
+@page { size: A4; margin: 16mm 16mm 18mm; }
+* { box-sizing: border-box; }
+body { font: 10.5pt/1.65 "Malgun Gothic", "Noto Sans KR", sans-serif; color: #262730; margin: 0; }
+h1 { font-size: 21pt; margin: 0 0 2mm; }
+h2 { font-size: 13.5pt; margin: 7mm 0 2mm; padding-bottom: 1mm; border-bottom: 2px solid #ff4b4b; break-after: avoid; }
+h3 { font-size: 11pt; margin: 4mm 0 1mm; break-after: avoid; }
+p { margin: 0 0 2.5mm; }
+.sub { color: #666; margin-bottom: 4mm; }
+code { background: #f0f2f6; padding: 0 1.2mm; border-radius: 1mm; font: 9.5pt Consolas, "D2Coding", monospace; }
+pre { background: #f0f2f6; border-radius: 2mm; padding: 3mm 4mm; margin: 1.5mm 0 3mm; font: 9pt/1.5 Consolas, "D2Coding", monospace; white-space: pre-wrap; break-inside: avoid; }
+table { border-collapse: collapse; width: 100%; margin: 1.5mm 0 3.5mm; font-size: 9.6pt; break-inside: avoid; }
+th, td { border: 1px solid #ccd; padding: 1.4mm 2.4mm; text-align: left; vertical-align: top; }
+th { background: #f0f2f6; }
+.steps { display: flex; gap: 2.5mm; margin: 2mm 0 3mm; }
+.step { flex: 1; border: 1px solid #ccd; border-radius: 2mm; padding: 2.5mm 3mm; font-size: 9.6pt; break-inside: avoid; }
+.step > b:first-child { display: block; color: #ff4b4b; margin-bottom: 1mm; }
+.flow { display: flex; align-items: center; gap: 2mm; margin: 2mm 0 3mm; font-size: 9.6pt; }
+.flow div { flex: 1; border: 1px solid #ccd; border-radius: 2mm; padding: 2.2mm 2.6mm; text-align: center; }
+.flow .arrow { flex: none; border: 0; padding: 0; color: #ff4b4b; font-size: 14pt; }
+.note { border-left: 3px solid #1c83e1; background: #eef5fd; padding: 2mm 3.5mm; margin: 2mm 0 3.5mm; break-inside: avoid; }
+.warn { border-left: 3px solid #e0a800; background: #fff8e1; padding: 2mm 3.5mm; margin: 2mm 0 3.5mm; break-inside: avoid; }
+ul, ol { margin: 0 0 3mm; padding-left: 5.5mm; }
+li { margin-bottom: 0.8mm; }
+</style>
+</head>
+<body>
+
+<h1>🧩 탐지 규칙(플러그인 방식) 올리기 안내</h1>
+<p class="sub">Guardian 대시보드 &gt; 탐지 규칙 메뉴 &gt; "플러그인 방식 규칙 올리기" 에서 쓰는 방법입니다. 일반 도구는 "도구 올리기 안내" PDF를 보세요.</p>
+
+<h2>1. 플러그인 방식 규칙이란?</h2>
+<p>Guardian 의 탐지 규칙은 두 가지입니다.</p>
+<table>
+<tr><th style="width:24%">방식</th><th>누가 판정하나</th></tr>
+<tr><td>🔥 방화벽 방식</td><td>Guardian 이 지나가는 <b>패킷</b>을 직접 보고 판정 (포트 스캔, SYN 플러드 등). 대시보드의 "새 규칙 추가" 양식으로 만들 수 있습니다.</td></tr>
+<tr><td>🧩 플러그인 방식</td><td>패킷 대신 <b>내가 만든 스크립트</b>가 판정합니다. Guardian 이 정해진 주기마다 스크립트를 실행하고, 스크립트가 "이 IP 가 수상하다" 라고 출력하면 Guardian 이 알림·차단을 합니다. (예: 로그인 기록 분석, 동시 접속 수 확인)</td></tr>
+</table>
+<div class="flow">
+  <div>Guardian 이<br><b>interval_sec</b> 마다<br>스크립트 실행</div><div class="arrow">▶</div>
+  <div>스크립트가<br><b>판정만</b> 출력<br>(JSON 한 줄씩)</div><div class="arrow">▶</div>
+  <div>Guardian 이<br>화이트리스트 확인 ·<br>알림 · (선택) 차단</div>
+</div>
+<div class="note"><b>역할 분담이 중요합니다.</b> 스크립트는 <b>판정만</b> 합니다. 차단(iptables)·화이트리스트 확인·로그 기록은 전부 Guardian 이 합니다. 스크립트가 직접 방화벽을 건드리지 않습니다.</div>
+
+<h2>2. 올리는 방법 한눈에</h2>
+<div class="steps">
+  <div class="step"><b>① 파일 만들기</b><code>rule.json</code> 과 판정 스크립트(<code>.py</code> / <code>.sh</code>)를 만듭니다.</div>
+  <div class="step"><b>② 올리기</b>"플러그인 방식 규칙 올리기"에서 파일을 모두 선택해 올립니다.</div>
+  <div class="step"><b>③ (선택) 시험</b>"🧪 샌드박스로 실행"으로 설치 없이 한 번 돌려 봅니다.</div>
+  <div class="step"><b>④ 승인</b>관리자가 서버 터미널에서 코드를 읽고 승인하면 <b>꺼진 상태</b>로 설치됩니다.</div>
+  <div class="step"><b>⑤ 켜기</b>탐지 규칙 화면의 카드에서 직접 "켜기".</div>
+</div>
+<div class="note"><b>왜 이렇게 번거롭나요?</b> 규칙 스크립트는 Guardian 이 계속 자동으로 실행하는 코드라서, 올리는 순간 실행되면 위험합니다. 그래서 (1) 올려도 실행되지 않고, (2) 승인은 서버 터미널에서만 가능하고, (3) 승인 뒤에도 꺼진 상태로 시작합니다. 대시보드에는 승인 버튼이 없습니다.</div>
+
+<h2>3. 올릴 파일</h2>
+<table>
+<tr><th style="width:28%">파일</th><th>설명</th></tr>
+<tr><td><code>rule.json</code> (필수)</td><td>규칙 설정 파일. 이름은 반드시 <code>rule.json</code>. (도구의 <code>plugin.json</code> 과 함께 올릴 수 없습니다.)</td></tr>
+<tr><td>판정 스크립트 (필수)</td><td><code>.py</code> 또는 <code>.sh</code>. <code>command</code> 의 첫 항목이 이 파일입니다. 필요하면 스크립트를 더 올릴 수 있습니다.</td></tr>
+</table>
+<ul>
+<li>한 번에 <b>6개</b>까지, 파일당 <b>64KB</b> 까지. <code>rule.json</code> 외의 <code>.json</code> 파일은 올릴 수 없습니다.</li>
+<li>스크립트는 승인되면 <code>rules/</code> 폴더에 그대로 놓입니다. 다른 규칙·파일과 이름이 겹치면 거부되므로 <b>규칙 id 를 접두어로</b> 쓰면 편합니다 (예: <code>many_connections.py</code>).</li>
+<li>같은 <code>id</code> 를 다시 올리면 승인 대기 중인 이전 것을 덮어씁니다. 이미 <code>rules/</code> 에 있는 <code>id</code> 나 파일 이름은 올릴 수 없습니다.</li>
+</ul>
+
+<h2>4. rule.json 항목</h2>
+<pre>{
+  "id": "many_connections",
+  "detector": "script",
+  "name": "동시 접속 과다",
+  "description": "한 IP 가 서버에 동시에 20개 이상 연결하면 알림",
+  "tags": ["접속", "과다"],
+  "command": ["./many_connections.py", "20"],
+  "interval_sec": 10,
+  "timeout_sec": 10,
+  "severity": "warning",
+  "block": false
+}</pre>
+<table>
+<tr><th style="width:21%">항목</th><th style="width:11%">필수</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>필수</td><td>영소문자로 시작, 영소문자·숫자·밑줄만, 40자까지. 기본 탐지기 이름(<code>port_scan</code> <code>syn_flood</code> <code>icmp_flood</code> <code>ssh_bruteforce</code> <code>ssh_login_success</code> <code>arp_spoof</code> <code>exfiltration</code>)과 예약어(<code>unblock</code> <code>manual_block</code> <code>syn_flood_distributed</code> <code>rule_toggle</code>)는 쓸 수 없습니다.</td></tr>
+<tr><td><code>detector</code></td><td>필수</td><td>반드시 <code>"script"</code>.</td></tr>
+<tr><td><code>command</code></td><td>필수</td><td>실행할 명령 목록 (1~6개). <b>첫 항목은 <code>./파일이름.py</code> (또는 <code>.sh</code>)</b>, 뒤는 스크립트에 넘길 인자입니다. <code>..</code> 금지. <code>./</code> 로 쓴 파일은 같이 올려야 합니다. <b>승인 뒤에는 화면에서 바꿀 수 없습니다</b> (바꾸려면 새로 올려서 승인).</td></tr>
+<tr><td><code>interval_sec</code></td><td>필수</td><td>실행 주기 (5~3600초). Guardian 이 이 간격마다 스크립트를 실행합니다.</td></tr>
+<tr><td><code>timeout_sec</code></td><td>선택</td><td>한 번 실행의 시간 제한 (1~60초, 기본 10). 넘기면 강제 종료됩니다. 스크립트는 주기 안에 끝나게 만드세요.</td></tr>
+<tr><td><code>name</code> · <code>description</code></td><td>권장</td><td>카드에 보일 이름(60자까지)·설명(200자까지).</td></tr>
+<tr><td><code>tags</code></td><td>선택</td><td>카드 이름 밑에 <b>#포트공격</b> 처럼 보일 태그. 6개까지, 공백 없이 20자까지.</td></tr>
+<tr><td><code>severity</code></td><td>선택</td><td><code>info</code>(Low) / <code>warning</code>(Medium, 기본) / <code>critical</code>(Critical).</td></tr>
+<tr><td><code>block</code></td><td>선택</td><td><code>true</code> 면 스크립트가 알린 IP 를 방화벽으로 차단합니다 (기본 <code>false</code> = 알림만). 아래 "차단 주의" 참고.</td></tr>
+<tr><td><code>block_duration_sec</code> · <code>block_permanent</code></td><td>선택</td><td>차단 기간(초) / 영구 차단. 안 쓰면 Guardian 의 기본 차단 시간을 씁니다.</td></tr>
+<tr><td><code>notify</code></td><td>선택</td><td>대시보드 알림. <code>{"popup": true, "sound": false}</code> 처럼 팝업·소리를 따로 정합니다. 생략하면 위험도 기본값 (Critical = 팝업+소리, Medium = 팝업, Low = 알림 없음). 승인 뒤 ⚙ 에서도 바꿀 수 있습니다.</td></tr>
+<tr><td><code>enabled</code></td><td>무시됨</td><td>써도 무시되고 <b>항상 꺼진 상태</b>로 설치됩니다.</td></tr>
+</table>
+<p>위 표에 없는 항목을 쓰면 오타를 막기 위해 거부됩니다.</p>
+
+<h2>5. 스크립트가 지켜야 할 출력 약속</h2>
+<p>스크립트는 수상한 대상이 있을 때만, <b>한 줄에 JSON 객체 하나씩</b> 표준출력(<code>print</code> / <code>echo</code>)으로 내보냅니다.</p>
+<pre>{"source": "192.168.56.20", "detail": "동시 접속 25개"}</pre>
+<table>
+<tr><th style="width:24%">키</th><th>설명</th></tr>
+<tr><td><code>source</code> (필수)</td><td>수상한 <b>IP 주소</b> (예: <code>192.168.56.20</code>) 또는 MAC (<code>mac:aa:bb:cc:dd:ee:ff</code>). 이 값이 IP/MAC 형식이 아니면 그 줄은 무시됩니다. <code>0.0.0.0/0</code> 같은 범위는 안 됩니다.</td></tr>
+<tr><td><code>detail</code> (선택)</td><td>화면에 보일 설명 (200자까지). 탐지 로그와 "ℹ️ 정보" 창에 나옵니다.</td></tr>
+</table>
+<ul>
+<li><b>아무것도 출력하지 않으면 "이상 없음"</b>입니다.</li>
+<li>JSON 이 아닌 줄(디버그 출력 등)은 조용히 무시됩니다. 판정 외의 말은 <code>stderr</code> 로 쓰세요.</li>
+<li>한 번 실행에 최대 <b>200줄</b>, 한 줄 <b>4096바이트</b> 까지만 읽고 나머지는 버립니다.</li>
+<li>종료 코드가 0 이 아니고 출력도 없으면 "오류"로 보고 Guardian 터미널에 한 번만 표시합니다 (같은 오류는 반복해서 찍지 않음).</li>
+<li>같은 규칙·같은 IP 의 알림은 설정된 시간(기본 30초) 안에는 한 번만 기록됩니다.</li>
+</ul>
+
+<h2>6. 실행 환경</h2>
+<ul>
+<li>스크립트는 서버의 <code>rules/</code> 폴더에서 실행됩니다 (작업 폴더가 <code>rules/</code>).</li>
+<li>Guardian 은 root 로 돌지만, 스크립트는 <b>일반 계정(<code>kali</code>) 권한으로 낮춰서</b> 실행됩니다. root 권한이 필요한 파일(일부 시스템 로그 등)은 읽지 못할 수 있으니, 승인 전에 서버에서 그 계정으로 읽히는지 확인하세요.</li>
+<li>승인하면 스크립트는 실행 권한이 자동으로 붙어(<code>755</code>) 설치됩니다. 첫 줄에 <code>#!/usr/bin/env python3</code> 를 쓰는 것을 권장합니다.</li>
+</ul>
+
+<h2>7. 완성 예제 (그대로 올려서 시험해 볼 수 있습니다)</h2>
+<p>"한 IP 가 서버에 동시에 N개 이상 연결해 있으면 알린다". 위 <code>rule.json</code> 예제와 함께 쓰는 <code>many_connections.py</code> 입니다.</p>
+<pre>#!/usr/bin/env python3
+# 한 IP 가 서버에 동시에 N개 이상 연결해 있으면 그 IP 를 알린다 (인자로 N, 기본 20)
+import collections
+import json
+import subprocess
+import sys
+
+limit = int(sys.argv[1]) if len(sys.argv) > 1 else 20
+out = subprocess.run(["ss", "-Htn", "state", "established"], capture_output=True, text=True).stdout
+count = collections.Counter()
+for line in out.splitlines():
+    cols = line.split()
+    if len(cols) >= 4:                        # Recv-Q Send-Q 내주소:포트 상대주소:포트
+        count[cols[3].rsplit(":", 1)[0].strip("[]")] += 1
+for ip, n in count.items():
+    if n >= limit:
+        print(json.dumps({"source": ip, "detail": f"동시 접속 {n}개"}, ensure_ascii=False))</pre>
+<div class="note">샌드박스 시험은 네트워크가 막힌 격리 상태라 <code>ss</code> 결과가 비어 있어 아무것도 출력되지 않을 수 있습니다 (오류가 아니라 "이상 없음"). 진짜 동작은 승인·설치한 뒤 켜서 확인하세요.</div>
+
+<h2>8. 올리기 · 시험 · 승인 · 켜기</h2>
+<h3>(1) 올리기</h3>
+<p>대시보드 &gt; 탐지 규칙 &gt; "플러그인 방식 규칙 올리기" 에서 <code>rule.json</code> 과 스크립트를 <b>한꺼번에</b> 선택하고 "⬆ 올리기". 설정이 틀리면 이유가 바로 표시되고, 통과하면 "승인 대기 중" 목록에 나타납니다 (아직 적용되지 않습니다).</p>
+<h3>(2) 샌드박스로 시험 (선택)</h3>
+<p>승인 대기 항목의 <b>"🧪 샌드박스로 실행"</b>은 설치 없이 스크립트를 한 번만 돌려 출력이 약속대로(JSON 한 줄씩) 나오는지 볼 수 있습니다. 네트워크 없음 · 파일 읽기 전용 · 메모리·시간 제한. 결과는 저장되지 않습니다.</p>
+<h3>(3) 승인 (서버 터미널에서만)</h3>
+<pre>cd ~/guardian
+python3 dashboard/approve_plugin.py list                 # 승인 대기 목록 ([규칙] / [도구] 표시)
+python3 dashboard/approve_plugin.py show many_connections    # 파일 내용과 주의할 패턴 보기
+python3 dashboard/approve_plugin.py approve many_connections # 내용을 다시 보여 주고 해시를 입력하면 승인
+python3 dashboard/approve_plugin.py reject many_connections  # 거절(삭제)</pre>
+<p>승인하면 스크립트와 <code>many_connections.json</code> 이 <code>rules/</code> 에 <b>꺼진 상태</b>로 설치되고, 5초 안에 탐지 규칙 화면의 "🧩 플러그인 방식" 에 카드가 나타납니다. 승인하는 사람은 <b>코드를 직접 읽어야</b> 합니다.</p>
+<h3>(4) 켜기</h3>
+<p>카드 오른쪽 위의 스위치로 켭니다. 켜기 전에 카드 아래의 위험도·차단 여부가 의도한 대로인지 확인하세요. 이름·위험도·주기·차단 여부는 ⚙ 로 수정할 수 있습니다 (수정하면 안전을 위해 꺼진 상태가 되고, 실행 명령은 바꿀 수 없습니다).</p>
+
+<div class="warn"><b>차단 주의 (<code>block: true</code>).</b> 스크립트가 틀린 IP 를 알리면 그 IP 가 실제로 차단됩니다. 화이트리스트에 있는 IP(관리 PC 등)는 차단되지 않지만, 그 외에는 정상 접속도 막힐 수 있습니다. 처음에는 <code>"block": false</code>(알림만)로 시험하고, 판정이 믿을 만한지 확인한 뒤에 차단을 켜세요. "탐지만(dry-run)" 모드(개요 메뉴의 슬라이드)에서는 차단이 실제로 적용되지 않으니 그 상태에서 먼저 시험하는 것도 좋습니다.</div>
+<div class="warn"><b>주의 표시는 보안 장치가 아닙니다.</b> <code>sudo</code>, <code>curl</code>, <code>subprocess</code> 같은 패턴이 있으면 "주의" 로 표시해 줄 뿐이고, 표시가 없다고 안전한 것은 아닙니다. 모르는 사람이 올린 코드는 승인하지 마세요.</div>
+
+<h2>9. 자주 나는 오류</h2>
+<table>
+<tr><th style="width:42%">메시지(요약)</th><th>고치는 법</th></tr>
+<tr><td>rule.json (탐지 규칙) 이 필요한 칸 / plugin.json 과 함께 올릴 수 없음</td><td>파일 이름이 정확히 <code>rule.json</code> 인지, 규칙 칸에 올렸는지 확인. 도구 파일(<code>plugin.json</code>)은 섞지 마세요.</td></tr>
+<tr><td>detector 는 "script" 여야 합니다</td><td><code>"detector": "script"</code> 를 넣으세요.</td></tr>
+<tr><td>'…' 는 기본 탐지기가 쓰는 이름입니다</td><td><code>id</code> 를 다른 이름으로 바꾸세요.</td></tr>
+<tr><td>rule.json 에 알 수 없는 항목이 있습니다</td><td>표에 없는 항목(오타 포함)을 지우세요.</td></tr>
+<tr><td>command 의 첫 항목은 './파일이름.py'…</td><td><code>"./스크립트.py"</code> 형식(<code>.py</code> / <code>.sh</code>)으로 쓰세요.</td></tr>
+<tr><td>command 의 ./파일 이 함께 올라오지 않았습니다</td><td>스크립트 파일을 같이 선택해서 올리세요.</td></tr>
+<tr><td>interval_sec 는 5~3600 사이의 정수</td><td><code>interval_sec</code> 를 넣고 범위를 지키세요 (필수 항목).</td></tr>
+<tr><td>rules/ 에 같은 이름의 파일이 이미 있습니다</td><td><code>id</code> 나 스크립트 파일 이름을 바꾸세요 (규칙 id 를 접두어로).</td></tr>
+<tr><td>같은 id 의 다른 종류가 승인 대기 중</td><td>먼저 삭제하거나 다른 <code>id</code> 를 쓰세요.</td></tr>
+<tr><td>(켰는데 아무 일도 안 일어남)</td><td>스크립트가 정말 판정을 출력하는지(샌드박스·서버에서 직접 실행), 출력이 JSON 한 줄씩인지, <code>source</code> 가 올바른 IP 인지 확인하세요. 오류는 Guardian 터미널에 한 번만 표시됩니다.</td></tr>
+</table>
+
+<h2>10. 올리기 전 점검표</h2>
+<ul>
+<li>☐ <code>rule.json</code> 에 <code>"detector": "script"</code> 와 <code>interval_sec</code> 가 있고, <code>id</code> 가 기본 탐지기 이름과 겹치지 않는다.</li>
+<li>☐ <code>command</code> 첫 항목이 <code>./이름.py</code> (또는 <code>.sh</code>)이고 그 파일을 같이 올렸다.</li>
+<li>☐ 스크립트가 수상한 대상만 <code>{"source": "IP", "detail": "…"}</code> 한 줄씩 출력하고, 이상 없으면 아무것도 출력하지 않는다.</li>
+<li>☐ 일반 계정 권한으로 읽을 수 있는 정보만 쓰고, 주기(<code>interval_sec</code>) 안에 끝난다.</li>
+<li>☐ 처음에는 <code>"block": false</code> 로 시험한다.</li>
+<li>☐ <code>tags</code> 로 무슨 규칙인지 알 수 있게 달았다 (예: <code>#접속</code>).</li>
+</ul>
+
+</body>
+</html>

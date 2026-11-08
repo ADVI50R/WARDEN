@@ -1,0 +1,12 @@
+{
+  "id": "icmp_flood",
+  "detector": "icmp_flood",
+  "tags": ["핑", "플러드", "DoS"],
+  "name": "핑 플러드",
+  "description": "ping 을 대량으로 보내 네트워크를 가득 채우는 공격",
+  "enabled": true,
+  "severity": "warning",
+  "block": true,
+  "window_sec": 5,
+  "max_packets": 50
+}

@@ -1,0 +1,21 @@
+{
+  "id": "snmp_probe",
+  "tags": [
+    "SNMP",
+    "정찰",
+    "UDP"
+  ],
+  "name": "SNMP 정보 수집",
+  "description": "161번 포트로 UDP 패킷을 반복해 보내면 알림",
+  "enabled": true,
+  "protocol": "udp",
+  "dst_ports": [
+    161
+  ],
+  "tcp_flags": "any",
+  "count": 5,
+  "window_sec": 60,
+  "distinct": "none",
+  "severity": "warning",
+  "block": false
+}

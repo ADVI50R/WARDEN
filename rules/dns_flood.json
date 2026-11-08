@@ -1,0 +1,21 @@
+{
+  "id": "dns_flood",
+  "tags": [
+    "DNS",
+    "플러드",
+    "UDP"
+  ],
+  "name": "DNS 쿼리 폭주",
+  "description": "53번 포트로 UDP 패킷이 몰리면 알림 (DNS 증폭·과부하 공격 의심)",
+  "enabled": true,
+  "protocol": "udp",
+  "dst_ports": [
+    53
+  ],
+  "tcp_flags": "any",
+  "count": 100,
+  "window_sec": 5,
+  "distinct": "none",
+  "severity": "warning",
+  "block": false
+}
