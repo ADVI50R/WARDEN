@@ -107,7 +107,7 @@ python3 dashboard/new_plugin.py --id my_scan --name "내 스캔" --kind task --l
 | 🧪 탐지 규칙 → "📤 플러그인 방식 규칙 올리기" | `rule.json` + 판정 스크립트(`.py`/`.sh`) | `rules/<id>.json` + 스크립트가 **꺼진 상태**로 설치됨 (카드에서 직접 켬) |
 
 각 칸에는 **"📄 구성 안내 PDF 받기"** 링크가 있습니다 (`static/guide_tool.pdf`, `static/guide_rule.pdf`). 소스는 `dashboard/guides/*.html` 이고, 고친 뒤에는 Edge/Chrome 으로 다시 뽑습니다:
-`msedge --headless --disable-gpu --no-pdf-header-footer --print-to-pdf=static/guide_rule.pdf guides/guide_rule.html` (미리보기는 `python preview/make_preview.py` 가 PDF 도 같이 복사).
+`msedge --headless --disable-gpu --no-pdf-header-footer --print-to-pdf=static/guide_rule.pdf guides/guide_rule.html` (미리보기는 저장소의 `python docs/preview/make_preview.py` 가 PDF 도 같이 복사).
 
 ```
 브라우저 ──올리기──► plugins_pending/<id>/  (실행 불가 상태로 저장만)

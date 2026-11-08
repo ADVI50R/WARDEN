@@ -126,7 +126,7 @@ sudo ip route del 192.168.57.0/24
 **확인:** 포트 스캔이 탐지됩니다. 포트가 열려 있다고 나오면 관리망 주소가 감시망에서도 닿는다는 뜻입니다 (대시보드 8080 포함). 토큰으로 보호되지만 망이 분리된 것은 아닙니다.
 
 ## 11. 슬로로리스 연결 고갈 (`slowloris`, 플러그인 방식 규칙)
-규칙 파일은 공유 폴더 `guardian/examples/slowloris_rule/` (`rule.json`, `slowloris_check.py`) 에 있습니다. 대시보드 "🧪 탐지 규칙 → 📤 플러그인 방식 규칙 올리기"로 두 파일을 올리고, 서버 터미널에서 `python3 ~/guardian/dashboard/approve_plugin.py approve slowloris` 로 승인한 뒤 화면에서 켭니다.
+규칙 파일은 저장소의 `docs/examples/slowloris_rule/` (`rule.json`, `slowloris_check.py`) 에 있습니다. 대시보드 "🧪 탐지 규칙 → 📤 플러그인 방식 규칙 올리기"로 두 파일을 올리고, 서버 터미널에서 `python3 ~/guardian/dashboard/approve_plugin.py approve slowloris` 로 승인한 뒤 화면에서 켭니다.
 
 서버 (시험용 웹 서버, 5분 뒤 저절로 꺼짐):
 ```bash

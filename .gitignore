@@ -4,8 +4,8 @@ plugins_pending/
 audit.jsonl
 audit.jsonl.old
 setup_log.txt
-dashboard/dashboard_config.json
-dashboard/plugins_state.json
+**/dashboard_config.json
+**/plugins_state.json
 *.pcap
 
 # python / editor leftovers

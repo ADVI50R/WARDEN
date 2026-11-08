@@ -37,6 +37,10 @@ import time
 import unicodedata
 
 SRC = os.path.dirname(os.path.abspath(__file__))
+# 저장소(배포본)에서는 프로그램이 src/ 안에 있고, setup.py·uninstall.py 만 바깥에 있다.
+# 설치하면 src/ 의 내용과 setup.py·uninstall.py 가 설치 위치 한 폴더에 모인다 (설치된 쪽에서 다시 실행하면 APP == SRC).
+APP = os.path.join(SRC, "src") if os.path.isfile(os.path.join(SRC, "src", "guardian.py")) else SRC
+TOOLS = ("setup.py", "uninstall.py")             # 바깥에 있는 설치·제거 도구 (guardianctl.py 가 setup.py 를 불러 씀)
 
 # 필요한 프로그램: (확인할 명령 또는 파이썬 모듈, {배포판 계열: 패키지}, 설명)
 DEPENDENCIES = [
@@ -64,12 +68,12 @@ NEVER_COPY = {"logs", "__pycache__", "plugins_pending", "audit.jsonl", ".git", "
 NEVER_COPY_DASHBOARD = {"dashboard_config.json", "plugins_state.json", "__pycache__"}
 MERGE_DIRS = {"rules", os.path.join("dashboard", "plugins")}     # 없는 파일만 추가 (있는 건 그대로)
 
-# 개발·실습 준비용이라 서버 설치본에는 넣지 않는 것 (원본 폴더에는 그대로 남음)
+# 개발·실습 준비용이라 서버 설치본에는 넣지 않는 것 (src/ 기준 경로. 문서·예제·미리보기는 저장소의 docs/ 에 있어 처음부터 복사 대상이 아님)
 DEV_ONLY = {
-    "ROADMAP.md", "진행상황_및_계획.txt", "migration_guide.txt", "lab_setup_guide.txt",   # 프로젝트 관리·실습실 준비 문서
-    "attack_auto.sh", "attack_test_guide.md",                                            # 공격자 VM 에서 쓰는 시험 도구
-    "examples", "preview",                                                               # 예제 규칙, 서버 없이 보는 화면 미리보기
     os.path.join("dashboard", "example_upload"), os.path.join("dashboard", "guides"),    # 업로드 예제, 안내 PDF 의 원본 HTML
+    # 예전 구조(모든 파일이 한 폴더)에서 실행할 때를 위한 이름들
+    "ROADMAP.md", "진행상황_및_계획.txt", "migration_guide.txt", "lab_setup_guide.txt",
+    "attack_auto.sh", "attack_test_guide.md", "examples", "preview", "docs", "src", "README.md", ".gitignore",
 }
 
 ALIAS_BEGIN = "# >>> guardian setup >>>"
@@ -461,8 +465,12 @@ class Installer:
             return True
         os.makedirs(self.target, exist_ok=True)
         copied = kept = 0
-        for root, dirs, files in os.walk(SRC):
-            rel = os.path.relpath(root, SRC)
+        for name in TOOLS:                                 # 바깥의 설치·제거 도구도 설치 위치에 같이 둠
+            if APP != SRC and os.path.isfile(os.path.join(SRC, name)):
+                shutil.copyfile(os.path.join(SRC, name), os.path.join(self.target, name))
+                copied += 1
+        for root, dirs, files in os.walk(APP):
+            rel = os.path.relpath(root, APP)
             rel = "" if rel == "." else rel
             top = rel.split(os.sep)[0] if rel else ""
             if top in NEVER_COPY or "__pycache__" in rel.split(os.sep):
@@ -495,7 +503,7 @@ class Installer:
         existed = os.path.exists(path)
         cfg = load_json(path, None) if existed else None
         if cfg is None:
-            cfg = load_json(os.path.join(SRC, "config.json"), {})
+            cfg = load_json(os.path.join(APP, "config.json"), {})
         cfg["interface"] = self.s["interface"]
         cfg["dry_run"] = bool(self.s["dry_run"])
         wl = [w for w in cfg.get("whitelist", []) if isinstance(w, str)]
@@ -617,7 +625,7 @@ class Installer:
             os.makedirs(os.path.join(tmp, "logs"))
             # 시험은 설치본의 '기본 규칙'으로 한다: 대시보드에서 꺼 둔 규칙 때문에 시험이 실패하지 않도록 임시 복사본에서만 모두 켬
             shutil.rmtree(os.path.join(tmp, "rules"), ignore_errors=True)
-            shutil.copytree(os.path.join(SRC, "rules"), os.path.join(tmp, "rules"),
+            shutil.copytree(os.path.join(APP, "rules"), os.path.join(tmp, "rules"),
                             ignore=shutil.ignore_patterns("__pycache__"))
             for name in os.listdir(os.path.join(tmp, "rules")):
                 if name.endswith(".json"):

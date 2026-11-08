@@ -11,7 +11,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # 기본은 실제 화면 코드(dashboard/static). 적용 전 시안은 `python make_preview.py staged` 처럼 폴더 이름을 주면 그 폴더(preview/staged)를 씁니다.
-STATIC = os.path.join(HERE, sys.argv[1]) if len(sys.argv) > 1 else os.path.join(HERE, "..", "dashboard", "static")
+STATIC = os.path.join(HERE, sys.argv[1]) if len(sys.argv) > 1 else os.path.join(HERE, "..", "..", "src", "dashboard", "static")
 
 
 def read(*parts):

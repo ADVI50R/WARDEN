@@ -348,6 +348,8 @@ textarea.txt.desc{resize:none;overflow:hidden;line-height:1.45;font:inherit;whit
     <thead><tr><th>대상</th><th>이유</th><th>시작</th><th>남은 시간</th><th>메모</th><th></th></tr></thead>
     <tbody id="blockedRows"></tbody>
   </table></div>
+  <p class="caption">🚨 차단을 한꺼번에 모두 풀어야 할 때(긴급 전체 해제)는 보안 서버 터미널에서 <code>gunblock</code> 을 실행하세요.
+    토큰이 새더라도 방어를 한 번에 풀 수 없도록 대시보드에는 이 기능을 넣지 않았습니다.</p>
 
   <h3>📒 IP별 공격 기록</h3>
   <p class="caption">같은 IP 의 알림은 30초 동안 한 번만 기록되므로, 횟수는 "탐지된 알림 수" 입니다.</p>
@@ -1184,7 +1186,8 @@ async function loadBlocked() {
   if (typing(tb) || selecting(tb)) return;
   clear(tb);
   if (!d.blocked.length) tb.append(el("tr", {}, el("td", {colspan: 6}, "차단 중인 대상이 없습니다.")));
-  d.blocked.forEach((b) => tb.append(el("tr", {}, el("td", {}, sourceLink(b.target.replace(/^mac:/, "")), d.simulated && el("span", {class: "tag sim"}, "모의")), el("td", {}, typeName(b.reason)),
+  d.blocked.forEach((b) => tb.append(el("tr", {}, el("td", {}, sourceLink(b.target.replace(/^mac:/, "")), d.simulated && el("span", {class: "tag sim"}, "모의")),
+    el("td", {}, typeName(b.reason), b.repeat > 1 ? el("span", {class: "tag", title: "24시간 안에 다시 자동 차단되어 더 길게 막음 (누적 차단)"}, `반복 ${b.repeat}회째`) : null),
     el("td", {}, fmtTime(b.since)), el("td", {}, b.permanent ? "영구" : fmtSpan(Math.max(0, b.remaining_sec))),
     el("td", {}, noteEditor(b.target, b.note)),
     el("td", {}, el("button", {class: "btn sm", onclick: () => unblock(b.target)}, "해제")))));
