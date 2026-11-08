@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Guardian - 실습용 리눅스 네트워크 관제/방어 도구 (초안)
+WARDEN - 실습용 리눅스 네트워크 관제/방어 도구 (초안)
 
 탐지: 포트 스캔, SYN 플러드, ICMP(핑) 플러드, SSH 무차별 대입, ARP 스푸핑, 대량 데이터 유출
-대응: iptables 전용 체인(GUARDIAN)에 차단 규칙 추가 -> 일정 시간 후 자동 해제
+대응: iptables 전용 체인(WARDEN)에 차단 규칙 추가 -> 일정 시간 후 자동 해제
 연동: JSON Lines 로그 파일(logs/events.jsonl) + REST API (대시보드용)
 
-실행: sudo python3 guardian.py
+실행: sudo python3 warden.py
 """
 import ipaddress
 import itertools
@@ -54,7 +54,7 @@ RULES = _Rules()
 IFACE = CFG["interface"]
 DRY_RUN = CFG["dry_run"]
 LOG_FILE = os.path.join(BASE_DIR, CFG["log_file"])
-CHAIN = "GUARDIAN"
+CHAIN = "WARDEN"
 
 # 실제 값은 main() 의 init_network() 에서 채움 (테스트 스크립트에서 직접 지정 가능)
 MY_IP = "0.0.0.0"
@@ -86,7 +86,7 @@ def init_network():
 
 
 def fixed_whitelist():
-    """화면에서 뺄 수 없는 주소: 서버 자신(어느 어댑터든)과 loopback. 빠지면 Guardian 이 자기 자신을 차단할 수 있음"""
+    """화면에서 뺄 수 없는 주소: 서버 자신(어느 어댑터든)과 loopback. 빠지면 WARDEN 이 자기 자신을 차단할 수 있음"""
     return {MY_IP, MY_MAC, "127.0.0.1"} | MY_IPS
 
 
@@ -254,7 +254,7 @@ def save_permanent():
 
 
 def restore_permanent():
-    """영구 차단은 Guardian 을 껐다 켜도 유지 (setup_firewall 이 체인을 비우므로 다시 적용)"""
+    """영구 차단은 WARDEN 을 껐다 켜도 유지 (setup_firewall 이 체인을 비우므로 다시 적용)"""
     for target, info in _load_json("permanent_blocks.json", {}).items():
         if isinstance(info, dict) and normalize_target(target) == target:
             block(target, str(info.get("reason", "permanent")), permanent=True)
@@ -347,7 +347,7 @@ def sync_firewall():
 
 def set_dry_run(value):
     """대시보드의 '실제 차단' 슬라이드. logs/dry_run_override.json 에 저장해 재시작 후에도 유지되고
-    (config.json 은 건드리지 않음), 다음에 Guardian 을 시작할 때 apply_dry_run_override() 가 이 값을 적용함"""
+    (config.json 은 건드리지 않음), 다음에 WARDEN 을 시작할 때 apply_dry_run_override() 가 이 값을 적용함"""
     global DRY_RUN
     value = bool(value)
     if value == DRY_RUN:
@@ -393,7 +393,7 @@ def set_whitelist(action, target):
             add.add(t)
         else:
             if t in fixed_whitelist():
-                return False, "서버 자신의 주소는 뺄 수 없습니다 (Guardian 이 자기 자신을 차단하게 됩니다)", False
+                return False, "서버 자신의 주소는 뺄 수 없습니다 (WARDEN 이 자기 자신을 차단하게 됩니다)", False
             if t not in WHITELIST:
                 return False, "화이트리스트에 없습니다", False
             add.discard(t)
@@ -464,7 +464,7 @@ def maintenance_loop():
 # ─────────────────────────── 탐지 로직 ───────────────────────────
 class Window:
     """슬라이딩 윈도우 하나: window 초 이내 기록의 개수·서로 다른 값·합계를 패킷마다 다시 세지 않고 이어서 계산한다.
-    (예전에는 패킷마다 기록 전체를 복사·집계해서 플러드가 들어올수록 Guardian 자신이 느려졌음)"""
+    (예전에는 패킷마다 기록 전체를 복사·집계해서 플러드가 들어올수록 WARDEN 자신이 느려졌음)"""
     __slots__ = ("q", "counts", "total", "last", "window")
 
     def __init__(self):
@@ -1223,7 +1223,7 @@ def check_custom(pkt, src, now):
 
 # ─────────────────────────── 탐지 규칙 (플러그인 방식, detector == "script") ───────────────────────────
 # 스크립트는 공격 여부를 '판정만' 한다 (한 줄에 하나씩 {"source": "IP", "detail": "..."} 를 표준출력으로).
-# 화이트리스트 확인·차단·로그 기록은 전부 여기(Guardian)가 하고, 스크립트가 직접 iptables 를 건드리지 않는다.
+# 화이트리스트 확인·차단·로그 기록은 전부 여기(WARDEN)가 하고, 스크립트가 직접 iptables 를 건드리지 않는다.
 # 설계 문서: rules/SCRIPT_RULES_TODO.md
 SCRIPT_MAX_OUTPUT_LINES = 200
 SCRIPT_MAX_LINE_BYTES = 4096
@@ -1259,7 +1259,7 @@ def _script_command(rule):
 
 
 def _script_env():
-    """root 로 뜬 Guardian 의 환경 변수를 스크립트에 물려주지 않는다"""
+    """root 로 뜬 WARDEN 의 환경 변수를 스크립트에 물려주지 않는다"""
     env = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C.UTF-8"}
     try:
         import pwd
@@ -1271,9 +1271,9 @@ def _script_env():
 
 def _exec_script(rule):
     """스크립트를 한 번 실행하고 (종료 코드, 표준출력, 표준오류) 를 돌려준다. 시간 제한을 넘으면 자식까지 프로세스 그룹째 끝낸다.
-    출력은 임시 파일로 받아 Guardian(root) 메모리에 얼마든지 쌓이지 않게 한다"""
+    출력은 임시 파일로 받아 WARDEN(root) 메모리에 얼마든지 쌓이지 않게 한다"""
     if os.getuid() == 0 and os.stat(BASE_DIR).st_uid == 0:
-        raise OSError("Guardian 폴더가 root 소유라 권한을 낮출 수 없어 실행하지 않습니다")
+        raise OSError("WARDEN 폴더가 root 소유라 권한을 낮출 수 없어 실행하지 않습니다")
     with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
         proc = subprocess.Popen(_script_command(rule), cwd=RULES_DIR, stdin=subprocess.DEVNULL, stdout=out, stderr=err,
                                 env=_script_env(), start_new_session=True, preexec_fn=_script_child_setup)
@@ -1500,7 +1500,7 @@ def _server_now():
         return None
 
 
-_pkt_base = None                 # Guardian 시작 때의 인터페이스 패킷 수
+_pkt_base = None                 # WARDEN 시작 때의 인터페이스 패킷 수
 
 
 def _iface_packets():
@@ -1515,7 +1515,7 @@ def _iface_packets():
 
 
 def _missed_packets():
-    """인터페이스가 주고받은 패킷 수와 Guardian 이 처리한 수의 차이 (플러드 때 못 따라간 양. IPv6 등 감시 대상이 아닌 것도 조금 포함)"""
+    """인터페이스가 주고받은 패킷 수와 WARDEN 이 처리한 수의 차이 (플러드 때 못 따라간 양. IPv6 등 감시 대상이 아닌 것도 조금 포함)"""
     cur = _iface_packets()
     if cur is None or _pkt_base is None:
         return None
@@ -1926,7 +1926,7 @@ class API(BaseHTTPRequestHandler):
 def main():
     global _pkt_base
     if os.geteuid() != 0:
-        sys.exit("[!] root 권한이 필요합니다: sudo python3 guardian.py")
+        sys.exit("[!] root 권한이 필요합니다: sudo python3 warden.py")
     init_network()
     if MY_IP == "0.0.0.0":
         sys.exit(f"[!] 인터페이스 '{IFACE}' 에 IP가 없습니다. 'ip a' 로 확인 후 config.json 을 고치세요.")
@@ -1949,7 +1949,7 @@ def main():
         threading.Thread(target=server.serve_forever, daemon=True).start()
 
     print("=" * 60)
-    print(f" Guardian 시작 | {IFACE} ({MY_IP})")
+    print(f" WARDEN 시작 | {IFACE} ({MY_IP})")
     print(f" 모드: {'DRY-RUN (탐지만, 실제 차단 안 함)' if DRY_RUN else '실제 차단 모드'}")
     if api["enabled"]:
         print(f" API : http://{api['host']}:{api['port']}/api/status")

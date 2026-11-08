@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Guardian 관제 대시보드 서버 (파이썬 표준 라이브러리만 사용 -> 인터넷 없이 실행 가능)
+WARDEN 관제 대시보드 서버 (파이썬 표준 라이브러리만 사용 -> 인터넷 없이 실행 가능)
 
 역할
   1) static/ 의 웹페이지(HTML/JS/CSS)를 보여준다
-  2) Guardian REST API(127.0.0.1:8000)를 대신 호출해 준다 (프록시)
-     -> Guardian API 는 계속 127.0.0.1 에만 열어 두면 되므로 더 안전
+  2) WARDEN REST API(127.0.0.1:8000)를 대신 호출해 준다 (프록시)
+     -> WARDEN API 는 계속 127.0.0.1 에만 열어 두면 되므로 더 안전
   3) plugins/ 폴더의 플러그인(보안 스크립트)을 목록/실행/중지/켜기끄기 한다
 
 실행:  python3 server.py            (설정은 dashboard_config.json, 처음 실행 시 자동 생성)
@@ -38,14 +38,14 @@ CONFIG_FILE = os.path.join(BASE, "dashboard_config.json")
 DEFAULT_CONFIG = {
     "host": "0.0.0.0",                       # 다른 PC(윈도우 10)에서 접속하려면 0.0.0.0 또는 관리망 IP
     "port": 8080,
-    "guardian_url": "http://127.0.0.1:8000",
+    "warden_url": "http://127.0.0.1:8000",
     "token": "",                             # 비어 있으면 처음 실행 때 자동 생성
 }
 
-# 대시보드가 Guardian 에 전달해도 되는 경로만 허용
-GUARDIAN_GET = {"/api/status", "/api/events", "/api/blocked", "/api/rules", "/api/history", "/api/rule_changes",
+# 대시보드가 WARDEN 에 전달해도 되는 경로만 허용
+WARDEN_GET = {"/api/status", "/api/events", "/api/blocked", "/api/rules", "/api/history", "/api/rule_changes",
                 "/api/packets", "/api/event_analysis"}
-GUARDIAN_POST = {"/api/block", "/api/unblock", "/api/note", "/api/rules", "/api/rules/update", "/api/rules/enable",
+WARDEN_POST = {"/api/block", "/api/unblock", "/api/note", "/api/rules", "/api/rules/update", "/api/rules/enable",
                  "/api/rules/delete", "/api/dry_run", "/api/whitelist"}
 
 MAX_OUTPUT_LINES = 500
@@ -57,7 +57,11 @@ def load_config():
     cfg = dict(DEFAULT_CONFIG)
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, encoding="utf-8") as f:
-            cfg.update(json.load(f))
+            saved = json.load(f)
+        if "guardian_url" in saved:                   # 이름을 바꾸기 전(Guardian) 설정 파일
+            saved.setdefault("warden_url", saved["guardian_url"])
+            saved.pop("guardian_url")
+        cfg.update(saved)
     if not cfg.get("token"):
         cfg["token"] = secrets.token_urlsafe(12)
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
@@ -274,7 +278,7 @@ def sandbox_run_pending(pid, params):
         raise ValueError("매니페스트(plugin.json / rule.json)의 id 가 업로드 폴더 이름과 다릅니다")
     if plugin_store.bundle_kind(raw) == "rule":
         # 탐지 규칙 스크립트: 승인 대기 파일은 실행 권한이 없으므로 확장자로 해석기를 골라 한 번만 돌려 본다.
-        # 실제 규칙은 Guardian 이 주기마다 돌리며, 출력의 한 줄 JSON({"source","detail"})이 판정이다
+        # 실제 규칙은 WARDEN 이 주기마다 돌리며, 출력의 한 줄 JSON({"source","detail"})이 판정이다
         first = manifest["command"][0][2:]
         interp = sys.executable if first.endswith(".py") else "bash"
         pdir = os.path.join(plugin_store.PENDING_DIR, pid)
@@ -319,7 +323,7 @@ def describe(plugin):
 
 # ─────────────────────────── HTTP ───────────────────────────
 class Handler(BaseHTTPRequestHandler):
-    server_version = "GuardianDash"
+    server_version = "WardenDash"
 
     def _json(self, code, obj):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
@@ -368,9 +372,9 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
-    # ── Guardian 프록시 ──
+    # ── WARDEN 프록시 ──
     def _proxy(self, path_with_query, method, body=None):
-        url = CFG["guardian_url"].rstrip("/") + path_with_query
+        url = CFG["warden_url"].rstrip("/") + path_with_query
         data = json.dumps(body).encode() if body is not None else None
         req = urllib.request.Request(url, data=data, method=method,
                                      headers={"Content-Type": "application/json"})
@@ -381,14 +385,14 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 return self._json(e.code, json.loads(e.read()))
             except ValueError:
-                return self._json(e.code, {"error": "Guardian 오류"})
+                return self._json(e.code, {"error": "WARDEN 오류"})
         except (urllib.error.URLError, OSError, ValueError):
-            return self._json(502, {"error": "Guardian 에 연결할 수 없습니다 (guardian.py 가 실행 중인지, "
+            return self._json(502, {"error": "WARDEN 에 연결할 수 없습니다 (warden.py 가 실행 중인지, "
                                              "config.json 의 api.enabled / port 를 확인하세요)"})
 
     def _proxy_pcap(self, path_with_query):
         """/api/pcap 은 JSON 이 아니라 파일(바이트)이라 따로 전달한다. 오류는 JSON 으로 온다"""
-        req = urllib.request.Request(CFG["guardian_url"].rstrip("/") + path_with_query, method="GET")
+        req = urllib.request.Request(CFG["warden_url"].rstrip("/") + path_with_query, method="GET")
         try:
             with urllib.request.urlopen(req, timeout=10) as r:
                 data = r.read(20_000_000)
@@ -397,10 +401,10 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 return self._json(e.code, json.loads(e.read()))
             except ValueError:
-                return self._json(e.code, {"error": "Guardian 오류"})
+                return self._json(e.code, {"error": "WARDEN 오류"})
         except (urllib.error.URLError, OSError):
-            return self._json(502, {"error": "Guardian 에 연결할 수 없습니다"})
-        name = time.strftime("guardian_%Y%m%d_%H%M%S.pcap")
+            return self._json(502, {"error": "WARDEN 에 연결할 수 없습니다"})
+        name = time.strftime("warden_%Y%m%d_%H%M%S.pcap")
         self.send_response(200)
         self.send_header("Content-Type", "application/vnd.tcpdump.pcap")
         self.send_header("Content-Length", str(len(data)))
@@ -418,7 +422,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._static(u.path)
         if not self._authed():
             return self._json(401, {"error": "토큰이 필요합니다"})
-        if u.path in GUARDIAN_GET:
+        if u.path in WARDEN_GET:
             return self._proxy(u.path + (f"?{u.query}" if u.query else ""), "GET")
         if u.path == "/api/pcap":
             return self._proxy_pcap(u.path + (f"?{u.query}" if u.query else ""))
@@ -486,7 +490,7 @@ class Handler(BaseHTTPRequestHandler):
         self._detail = {k: body[k] for k in AUDIT_KEYS if k in body}
         if isinstance(body.get("rule"), dict) and body["rule"].get("id"):     # 수정(/update)은 id 가 rule 밖에 있음
             self._detail["id"] = str(body["rule"]["id"])[:40]
-        if u.path in GUARDIAN_POST:
+        if u.path in WARDEN_POST:
             return self._proxy(u.path, "POST", body)
         m = re.fullmatch(r"/api/plugin_uploads/([a-z0-9_]{1,40})/run_sandboxed", u.path)
         if m:
@@ -527,7 +531,7 @@ def main():
     print("=" * 60)
     print(f" 대시보드 : http://{CFG['host']}:{CFG['port']}/   (브라우저에서 접속)")
     print(f" 로그인 토큰 : {CFG['token']}")
-    print(f" Guardian : {CFG['guardian_url']}")
+    print(f" WARDEN : {CFG['warden_url']}")
     print("=" * 60)
     try:
         server.serve_forever()

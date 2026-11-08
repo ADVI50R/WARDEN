@@ -1,6 +1,6 @@
 # WARDEN — Watch, Alert, Respond, Defend, Explain, Notify
 
-실습용 리눅스 네트워크 관제·방어 도구. 프로그램 이름은 **Guardian** (`guardian.py`) 입니다.
+실습용 리눅스 네트워크 관제·방어 도구입니다. 본체는 `warden.py`, 웹 대시보드는 `dashboard/server.py` 입니다. (2026-11-08 이전 이름: Guardian)
 
 | | 하는 일 |
 |---|---|
@@ -23,8 +23,8 @@
    cd WARDEN
    sudo python3 setup.py
    ```
-   화면에서 감시 인터페이스·대시보드 주소·관리 PC IP 를 고르고, 부팅 때 자동으로 켜려면 "자동 시작 서비스"를 켭니다. 끝나면 대시보드 주소와 로그인 토큰이 화면에 나옵니다. 설치 위치(기본 `~/guardian`)에는 `src/` 의 내용과 `setup.py`·`uninstall.py` 가 한 폴더로 들어갑니다.
-4. **확인**: `gstatus` (켜짐·모드·주소), 브라우저로 대시보드 접속
+   화면에서 감시 인터페이스·대시보드 주소·관리 PC IP 를 고르고, 부팅 때 자동으로 켜려면 "자동 시작 서비스"를 켭니다. 끝나면 대시보드 주소와 로그인 토큰이 화면에 나옵니다. 설치 위치(기본 `~/warden`)에는 `src/` 의 내용과 `setup.py`·`uninstall.py` 가 한 폴더로 들어갑니다.
+4. **확인**: `wstatus` (켜짐·모드·주소), 브라우저로 대시보드 접속
 5. **시연 공격**: 공격자 VM 에서 `docs/attack_test_guide.md` 의 명령 (같은 내부 네트워크에 둘 것, 아래 2번 참고)
 
 제거는 `sudo python3 uninstall.py` (백업 후 삭제). 대시보드 사용법은 `src/dashboard/README.md`.
@@ -37,8 +37,8 @@ WARDEN/
 ├── setup.py           # 설치 도구 (sudo python3 setup.py)
 ├── uninstall.py       # 제거 도구 (sudo python3 uninstall.py)
 ├── src/               # 서버에 설치되는 프로그램
-│   ├── guardian.py    # 메인 프로그램 (탐지 + 차단 + API)
-│   ├── guardianctl.py # 켜기·끄기 (gstart / gstop / gstatus / glog / gunblock)
+│   ├── warden.py    # 메인 프로그램 (탐지 + 차단 + API)
+│   ├── wardenctl.py # 켜기·끄기 (wstart / wstop / wstatus / wlog / wunblock)
 │   ├── config.json    # 기본 설정
 │   ├── selftest.py    # 가짜 패킷으로 하는 자가 시험
 │   ├── rules/         # 탐지 규칙 (파일 하나가 규칙 하나)
@@ -52,7 +52,7 @@ WARDEN/
     ├── examples/              # 플러그인 방식 규칙 예제 (슬로로리스)
     └── preview/               # 서버 없이 대시보드 화면 보기 (index.html)
 ```
-설치된 서버에서는 `~/guardian/guardian.py`, `~/guardian/logs/events.jsonl`(실행하면 자동 생성되는 이벤트 로그)처럼 한 폴더에 모입니다.
+설치된 서버에서는 `~/warden/warden.py`, `~/warden/logs/events.jsonl`(실행하면 자동 생성되는 이벤트 로그)처럼 한 폴더에 모입니다.
 
 동작 흐름: **패킷 수집(scapy) → 규칙으로 판단 → 이벤트 기록 → (설정 시) iptables로 차단 → 5분 뒤 자동 해제**
 
@@ -87,8 +87,8 @@ WARDEN/
 ip a                                  # 인터페이스 이름 확인 (eth0 인지 등)
 sudo apt install python3-scapy        # 칼리엔 보통 이미 있음
 sudo systemctl start ssh              # SSH 공격 테스트용으로 서비스 켜기
-cd guardian
-sudo python3 guardian.py
+cd warden
+sudo python3 warden.py
 ```
 
 처음에는 `"dry_run": true` 상태로 **탐지만** 되는지 확인하고, 잘 되면 실제 차단을 테스트하세요. `config.json` 을 고치고 재시작하는 대신, 대시보드 "관제 서버 상태" 카드의 슬라이드로 바로 켤 수 있습니다 (재시작 없이 적용, `logs/dry_run_override.json` 에 저장되어 다음 시작에도 유지).
@@ -175,7 +175,7 @@ JSON 파일에는 주석(`//`)을 쓸 수 없으니 설명은 이 문서를 보�
 2. **차단했는데 로그에 계속 패킷이 보여요.** 정상입니다. scapy는 방화벽(iptables)보다 **앞단**에서 패킷을 보기 때문에, 차단된 패킷도 "보이긴" 합니다. 실제로는 버려지고 있습니다. (코드에선 차단된 IP는 무시하도록 처리함)
 3. **iptables 규칙이 남아서 네트워크가 이상해요.** 프로그램이 강제 종료(kill -9 등)되면 정리가 안 될 수 있습니다. 아래로 수동 정리:
    ```bash
-   sudo iptables -D INPUT -j GUARDIAN; sudo iptables -F GUARDIAN; sudo iptables -X GUARDIAN
+   sudo iptables -D INPUT -j WARDEN; sudo iptables -F WARDEN; sudo iptables -X WARDEN
    sudo iptables -L -n     # 현재 규칙 확인
    ```
 4. **오탐(정상인데 공격으로 판단).** 기준값은 실습용 대략치입니다. 너무 자주 뜨면 숫자를 올리고, 안 뜨면 내리세요. 예를 들어 웹페이지 하나 여는 것도 연결을 여러 개 만듭니다.

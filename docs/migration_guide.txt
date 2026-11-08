@@ -1,5 +1,5 @@
 ==================================================================
-  Guardian 관제 실습 - 학교 서버 가상 컴퓨터로 옮기기 가이드
+  WARDEN 관제 실습 - 학교 서버 가상 컴퓨터로 옮기기 가이드
 ==================================================================
 
 [ 목표 ]
@@ -9,8 +9,8 @@
 
   옮기는 것은 "칼리 VM 2대" (보안 서버, 공격자) 뿐이다.
   Windows 10 VM 자체와 DWAgent 는 옮기지 않는다.
-  (guardian.py, rules/, logs/, 대시보드 토큰은 모두 보안 서버 칼리
-   안의 ~/guardian 에 있으므로 칼리 VM 을 옮기면 함께 따라간다)
+  (warden.py, rules/, logs/, 대시보드 토큰은 모두 보안 서버 칼리
+   안의 ~/warden 에 있으므로 칼리 VM 을 옮기면 함께 따라간다)
 
 [ 진행 순서 ]
 
@@ -70,7 +70,7 @@
     - 학교 쪽에서 VirtualBox 등이 돌아야 한다
 
   방법 B. 파일만 옮기고 새로 만들기
-    - ~/guardian 폴더(약 0.3MB) 만 가져와서 새 칼리에 올린다
+    - ~/warden 폴더(약 0.3MB) 만 가져와서 새 칼리에 올린다
     - 칼리 설치와 패키지 설치를 다시 해야 하지만, 깨끗하게 시작된다
     - 인터넷이 필요하다 (패키지 설치)
 
@@ -81,13 +81,13 @@
   1) 칼리 두 VM 을 정상 종료한다 (sudo poweroff)
   2) VirtualBox > 보안 서버 선택 > 스냅샷 탭 > 찍기
      이름: 이전전백업   (공격자도 동일)
-  3) 보안 서버 칼리에서 guardian 폴더 압축 (VM 켠 상태에서 먼저 해도 됨)
+  3) 보안 서버 칼리에서 warden 폴더 압축 (VM 켠 상태에서 먼저 해도 됨)
        cd ~
-       tar czf /media/sf_share/guardian_backup.tgz guardian
+       tar czf /media/sf_share/warden_backup.tgz warden
      ※ rules/ 와 logs/ 와 dashboard_config.json 이 포함되는지 확인
-       tar tzf /media/sf_share/guardian_backup.tgz | grep -E "rules|logs|dashboard_config"
+       tar tzf /media/sf_share/warden_backup.tgz | grep -E "rules|logs|dashboard_config"
 
-[확인] guardian_backup.tgz 가 공유 폴더에 있고, 스냅샷이 찍혔다
+[확인] warden_backup.tgz 가 공유 폴더에 있고, 스냅샷이 찍혔다
 
 
 ==================================================================
@@ -174,18 +174,18 @@
 ==================================================================
 
   [3-1] 가져갈 파일 (공유 폴더 등 어느 방법이든)
-    - guardian_backup.tgz  (1-1 에서 만든 것, 약 0.3MB)
-    - 또는 guardian_dashboard.zip
+    - warden_backup.tgz  (1-1 에서 만든 것, 약 0.3MB)
+    - 또는 warden_dashboard.zip
 
   [3-2] 학교 가상 컴퓨터에서 칼리 2대 새로 만들기
     -> lab_setup_guide.txt 의 2~6 단계를 그대로 따른다
        (칼리 이미지 받기 > 복제 > 첫 실행 > 도구 설치 > 내부망 전환)
     -> 인터넷이 필요한 구간(5단계) 이 있으니 학교 인터넷 정책 확인
 
-  [3-3] 보안 서버에 guardian 올리기
-    tar xzf guardian_backup.tgz -C ~
-    ls ~/guardian        # config.json, rules, logs, dashboard 확인
-    cd ~/guardian
+  [3-3] 보안 서버에 warden 올리기
+    tar xzf warden_backup.tgz -C ~
+    ls ~/warden        # config.json, rules, logs, dashboard 확인
+    cd ~/warden
     python3 selftest.py  # 44/44 통과 확인
 
   [3-4] 이후 4~5단계로 진행
@@ -220,11 +220,11 @@
     nmcli con show
     sudo nmcli con mod lab connection.interface-name <새 이름>
     sudo nmcli con up lab
-  그리고 ~/guardian/config.json 의 "interface" 도 같이 수정한다.
+  그리고 ~/warden/config.json 의 "interface" 도 같이 수정한다.
 
 [4-3] 대시보드 접속 허용 주소
 
-  - ~/guardian/dashboard/dashboard_config.json 의 "host" 가
+  - ~/warden/dashboard/dashboard_config.json 의 "host" 가
     192.168.57.10 이어야 한다 (어댑터 2 가 없으면 대시보드가 안 켜짐)
   - 대시보드 토큰은 같은 파일에 그대로 들어 있다 (옮겨져도 유지됨)
   - 새 토큰이 필요하면 "token" 값을 빈 문자열로 바꾸고 다시 실행하면
@@ -232,7 +232,7 @@
 
 [4-4] whitelist
 
-  ~/guardian/config.json 의 "whitelist" 에 새 관리 PC 의 주소를 넣는다.
+  ~/warden/config.json 의 "whitelist" 에 새 관리 PC 의 주소를 넣는다.
   (스스로를 차단하지 않게)
    - 호스트 전용망 192.168.57.1
    - 학교 서버 안에서 접속하는 PC 의 주소가 따로 있으면 그것도
@@ -249,8 +249,8 @@
 
   공유 폴더가 없으면 scp 나 압축 파일로 전달한다. 갱신할 땐 rules/ 와
   logs/ 를 덮어쓰지 않도록 .py 파일과 dashboard/ 만 복사한다.
-    cp 새폴더/*.py ~/guardian/
-    cp -r 새폴더/dashboard ~/guardian/
+    cp 새폴더/*.py ~/warden/
+    cp -r 새폴더/dashboard ~/warden/
 
 
 ==================================================================
@@ -264,8 +264,8 @@
         보안 서버:  ping -c 3 192.168.56.20
         공격자:    ping -c 3 192.168.56.10
   [ ] 인터넷 차단 확인: ping -c 2 8.8.8.8 실패해야 정상
-  [ ] cd ~/guardian && python3 selftest.py  -> 44/44 통과
-  [ ] sudo python3 guardian.py 실행, 오류 없음
+  [ ] cd ~/warden && python3 selftest.py  -> 44/44 통과
+  [ ] sudo python3 warden.py 실행, 오류 없음
   [ ] python3 dashboard/server.py 실행, "로그인 토큰" 출력 확인
   [ ] 학교 가상 컴퓨터 브라우저에서 http://192.168.57.10:8080 접속
   [ ] 규칙 목록이 그대로 보이고, 켜기/끄기 상태가 유지됨
@@ -304,7 +304,7 @@
      (그 컴퓨터에서 ping 192.168.57.10 먼저)
 
   증상: 로그인 토큰을 모르겠음
-  -> 보안 서버에서  cat ~/guardian/dashboard/dashboard_config.json
+  -> 보안 서버에서  cat ~/warden/dashboard/dashboard_config.json
 
   증상: 두 VM 이 서로 ping 이 안 됨
   -> 내부 네트워크 이름 lab (대소문자 포함) 동일 / MAC 주소가 서로 다름
@@ -321,7 +321,7 @@
   증상: 파일 전송 후 import 가 실패 (파일 손상)
   -> 체크섬 비교 (Get-FileHash). 다르면 다시 복사.
 
-  증상: Guardian 이 강제 종료된 뒤 네트워크가 이상함
-  -> lab_setup_guide.txt 9단계의 iptables GUARDIAN 체인 정리 명령 참고
+  증상: WARDEN 이 강제 종료된 뒤 네트워크가 이상함
+  -> lab_setup_guide.txt 9단계의 iptables WARDEN 체인 정리 명령 참고
 
 ==================================================================

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-selftest.py - 실제 패킷/VM 없이 Guardian 의 탐지 로직만 시험합니다.
+selftest.py - 실제 패킷/VM 없이 WARDEN 의 탐지 로직만 시험합니다.
 
-가짜 패킷 객체를 만들어 guardian._handle() 에 직접 넣고,
+가짜 패킷 객체를 만들어 warden._handle() 에 직접 넣고,
 기대한 이벤트가 발생하는지 확인합니다.
 scapy, Npcap, 관리자 권한 모두 필요 없습니다.
 
@@ -12,15 +12,15 @@ scapy, Npcap, 관리자 권한 모두 필요 없습니다.
 import sys
 import time
 
-# ── guardian 을 '라이브러리처럼' 불러오기 위한 최소한의 가짜 scapy ──
-# guardian.py 는 맨 위에서 scapy 를 import 하므로, 진짜가 없으면 가짜를 넣어준다.
+# ── warden 을 '라이브러리처럼' 불러오기 위한 최소한의 가짜 scapy ──
+# warden.py 는 맨 위에서 scapy 를 import 하므로, 진짜가 없으면 가짜를 넣어준다.
 import types
 
 try:
     import scapy.all  # noqa: F401  (있으면 그대로 사용)
 except ImportError:
     fake = types.ModuleType("scapy.all")
-    # guardian 이 쓰는 이름들만 최소로 채운다
+    # warden 이 쓰는 이름들만 최소로 채운다
     fake.sniff = lambda *a, **k: None
     fake.get_if_addr = lambda i: "192.168.56.10"
     fake.get_if_hwaddr = lambda i: "aa:bb:cc:dd:ee:ff"
@@ -37,7 +37,7 @@ except ImportError:
     sys.modules["scapy"] = scapy_pkg
     sys.modules["scapy.all"] = fake
 
-import guardian as g  # noqa: E402
+import warden as g  # noqa: E402
 
 # 테스트 중엔 실제 방화벽/네트워크를 건드리지 않는다
 g.DRY_RUN = True
@@ -139,7 +139,7 @@ ATTACKER = "192.168.56.20"
 results = []
 
 print("=" * 64)
-print(" Guardian 자체 테스트 (가짜 패킷)")
+print(" WARDEN 자체 테스트 (가짜 패킷)")
 print("=" * 64)
 
 # 항목마다 다른 공격자 IP 를 쓴다.
@@ -644,7 +644,7 @@ if os.name == "posix":
     check("스크립트 실행: 시간 제한이 되면 자식 프로세스까지 끝냄", time.time() - t0 < 4 and alive == "0")
     r_big = script("t_big.sh", "while :; do echo xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx; done")
     g.run_script_rule(r_big)
-    check("스크립트 실행: 끝없이 출력해도 Guardian 이 멈추지 않음", True)
+    check("스크립트 실행: 끝없이 출력해도 WARDEN 이 멈추지 않음", True)
     os.symlink("/bin/echo", os.path.join(g.RULES_DIR, "t_link"))
     try:
         g._script_command({"command": ["./t_link"]}); link_ok = False

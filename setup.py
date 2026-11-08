@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Guardian 설치 도구 — 한 번 실행하면 보안 서버에 Guardian 과 대시보드를 구성합니다.
+WARDEN 설치 도구 — 한 번 실행하면 보안 서버에 WARDEN 과 대시보드를 구성합니다.
 
   sudo python3 setup.py            화면 모드: 진행 순서·필요한 프로그램·IP 구성을 확인하고 설정을 고른 뒤 설치
   sudo python3 setup.py --yes      화면 없이 자동으로 고른 기본값으로 바로 설치
@@ -17,7 +17,7 @@ Guardian 설치 도구 — 한 번 실행하면 보안 서버에 Guardian 과 �
   5. approve 단축 명령 (~/.zshrc, ~/.bashrc)
   6. (선택) systemd 자동 시작 서비스 — 기본은 끔
   7. 자가 시험 (임시 복사본에서 selftest.py)
-  8. Guardian·대시보드 실행 (켜져 있으면 새 코드로 다시 시작)
+  8. WARDEN·대시보드 실행 (켜져 있으면 새 코드로 다시 시작)
 
 방화벽(UFW)·sudoers 는 건드리지 않습니다. 화면에서 고르지 않은 항목은 기존 설정을 유지하고, 새로 설치할 때는 기본값을 씁니다.
 """
@@ -39,12 +39,12 @@ import unicodedata
 SRC = os.path.dirname(os.path.abspath(__file__))
 # 저장소(배포본)에서는 프로그램이 src/ 안에 있고, setup.py·uninstall.py 만 바깥에 있다.
 # 설치하면 src/ 의 내용과 setup.py·uninstall.py 가 설치 위치 한 폴더에 모인다 (설치된 쪽에서 다시 실행하면 APP == SRC).
-APP = os.path.join(SRC, "src") if os.path.isfile(os.path.join(SRC, "src", "guardian.py")) else SRC
-TOOLS = ("setup.py", "uninstall.py")             # 바깥에 있는 설치·제거 도구 (guardianctl.py 가 setup.py 를 불러 씀)
+APP = os.path.join(SRC, "src") if os.path.isfile(os.path.join(SRC, "src", "warden.py")) else SRC
+TOOLS = ("setup.py", "uninstall.py")             # 바깥에 있는 설치·제거 도구 (wardenctl.py 가 setup.py 를 불러 씀)
 
 # 필요한 프로그램: (확인할 명령 또는 파이썬 모듈, {배포판 계열: 패키지}, 설명)
 DEPENDENCIES = [
-    ("python3", {"debian": "python3", "rhel": "python3"}, "Guardian·대시보드 실행"),
+    ("python3", {"debian": "python3", "rhel": "python3"}, "WARDEN·대시보드 실행"),
     ("py:scapy", {"debian": "python3-scapy", "rhel": "python3-scapy"}, "패킷 감시"),
     ("iptables", {"debian": "iptables", "rhel": "iptables-nft"}, "방화벽 차단"),
     ("ss", {"debian": "iproute2", "rhel": "iproute"}, "연결·포트 확인"),
@@ -76,32 +76,32 @@ DEV_ONLY = {
     "attack_auto.sh", "attack_test_guide.md", "examples", "preview", "docs", "src", "README.md", ".gitignore",
 }
 
-ALIAS_BEGIN = "# >>> guardian setup >>>"
-ALIAS_END = "# <<< guardian setup <<<"
+ALIAS_BEGIN = "# >>> warden setup >>>"
+ALIAS_END = "# <<< warden setup <<<"
 
 
 def alias_block(target):
     """셸 설정 파일에 넣을 단축 명령 (setup.py 가 넣고 uninstall.py 가 이 블록째 지움)"""
-    ctl = f"python3 {target}/guardianctl.py"
+    ctl = f"python3 {target}/wardenctl.py"
     return (f"{ALIAS_BEGIN}\n"
             f"alias approve=\"python3 {target}/dashboard/approve_plugin.py\"   # 업로드된 플러그인 승인 화면\n"
-            f"alias gstart=\"sudo {ctl} start\"       # Guardian·대시보드를 백그라운드로 켜기 (켜져 있으면 그대로)\n"
-            f"alias gstop=\"sudo {ctl} stop\"         # 끄기\n"
-            f"alias grestart=\"sudo {ctl} restart\"   # 새 코드로 다시 켜기\n"
-            f"alias gstatus=\"{ctl} status\"          # 켜짐·꺼짐, 모드, 대시보드 주소\n"
-            f"alias glog=\"sudo {ctl} log\"           # 최근 실행 기록 (glog dashboard 로 대시보드 기록)\n"
-            f"alias gunblock=\"sudo {ctl} unblock-all\"   # 긴급 전체 해제 (목록 확인 후 yes 입력)\n"
+            f"alias wstart=\"sudo {ctl} start\"       # WARDEN·대시보드를 백그라운드로 켜기 (켜져 있으면 그대로)\n"
+            f"alias wstop=\"sudo {ctl} stop\"         # 끄기\n"
+            f"alias wrestart=\"sudo {ctl} restart\"   # 새 코드로 다시 켜기\n"
+            f"alias wstatus=\"{ctl} status\"          # 켜짐·꺼짐, 모드, 대시보드 주소\n"
+            f"alias wlog=\"sudo {ctl} log\"           # 최근 실행 기록 (wlog dashboard 로 대시보드 기록)\n"
+            f"alias wunblock=\"sudo {ctl} unblock-all\"   # 긴급 전체 해제 (목록 확인 후 yes 입력)\n"
             f"{ALIAS_END}\n")
 
-UNIT_GUARDIAN = """[Unit]
-Description=Guardian (packet monitoring and automatic blocking)
+UNIT_WARDEN = """[Unit]
+Description=WARDEN (packet monitoring and automatic blocking)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 WorkingDirectory={target}
 UMask=0077
-ExecStart=/usr/bin/python3 {target}/guardian.py run
+ExecStart=/usr/bin/python3 {target}/warden.py run
 Restart=on-failure
 RestartSec=5
 
@@ -110,9 +110,9 @@ WantedBy=multi-user.target
 """
 
 UNIT_DASHBOARD = """[Unit]
-Description=Guardian web dashboard
-After=guardian.service
-Wants=guardian.service
+Description=WARDEN web dashboard
+After=warden.service
+Wants=warden.service
 
 [Service]
 User={user}
@@ -241,10 +241,10 @@ class Platform:
         if not self.systemd:
             out.append(("warn", "systemd 가 없어 자동 시작 서비스는 쓸 수 없습니다" + (" (WSL 은 /etc/wsl.conf 에서 켤 수 있음)" if self.wsl else "")))
         if self.firewalld:
-            out.append(("warn", "firewalld 가 켜져 있습니다. firewalld 를 다시 읽으면(reload) Guardian 의 차단 규칙이 지워질 수 있습니다 "
+            out.append(("warn", "firewalld 가 켜져 있습니다. firewalld 를 다시 읽으면(reload) WARDEN 의 차단 규칙이 지워질 수 있습니다 "
                                 "— 설치 도구는 방화벽을 건드리지 않으니, 시연 중에는 firewalld 를 reload 하지 마세요"))
         if self.ufw:
-            out.append(("warn", "UFW 가 켜져 있습니다. Guardian 의 GUARDIAN 체인과 결과가 섞여 헷갈릴 수 있습니다 (이 프로젝트는 UFW 를 쓰지 않음)"))
+            out.append(("warn", "UFW 가 켜져 있습니다. WARDEN 의 WARDEN 체인과 결과가 섞여 헷갈릴 수 있습니다 (이 프로젝트는 UFW 를 쓰지 않음)"))
         if self.selinux == "Enforcing":
             out.append(("warn", "SELinux 가 Enforcing 입니다. 서비스가 막히면 'sudo ausearch -m avc -ts recent' 로 거부 기록을 확인하세요"))
         if self.iptables:
@@ -296,7 +296,7 @@ class Env:
 
 
 def default_settings(env):
-    target = os.path.join(env.home, "guardian")
+    target = os.path.join(env.home, "warden")
     old_cfg = load_json(os.path.join(target, "config.json"), {})
     old_dash = load_json(os.path.join(target, "dashboard", "dashboard_config.json"), {})
     names = [n for n, _, _ in env.ifaces]
@@ -321,7 +321,8 @@ def default_settings(env):
         "admin_ip": admin,
         "dry_run": old_cfg.get("dry_run", True),
         "alias": True,
-        "systemd": False,
+        # 이미 서비스로 쓰던 서버(이름을 바꾸기 전 guardian.service 포함)면 기본으로 켬
+        "systemd": any(os.path.exists(f"/etc/systemd/system/{u}.service") for u in ("warden", "guardian")),
         "selftest": True,
         "start": True,
     }
@@ -367,9 +368,9 @@ def network_checks(env, s):
             out.append(("warn", "관리 PC IP 가 비어 있습니다. 실제 차단 때 대시보드 접속이 막힐 수 있습니다"))
     except ValueError:
         out.append(("bad", f"관리 PC IP '{s['admin_ip']}' 가 올바른 주소가 아닙니다"))
-    for port, name in ((8000, "Guardian API"), (int(s["port"]) if s["port"].isdigit() else 0, "대시보드")):
+    for port, name in ((8000, "WARDEN API"), (int(s["port"]) if s["port"].isdigit() else 0, "대시보드")):
         if port in env.ports:
-            out.append(("warn", f"{port}번 포트가 이미 사용 중입니다 ({name}) — 기존 Guardian 이면 설치 뒤 새 코드로 다시 시작합니다"))
+            out.append(("warn", f"{port}번 포트가 이미 사용 중입니다 ({name}) — 기존 WARDEN 이면 설치 뒤 새 코드로 다시 시작합니다"))
     return out
 
 
@@ -407,13 +408,13 @@ class Installer:
               ("설정 파일 작성", self.step_config),
               ("소유자·권한 정리", self.step_perms)]
         if self.s["alias"]:
-            st.append(("단축 명령 등록 (approve·gstart 등)", self.step_alias))
+            st.append(("단축 명령 등록 (approve·wstart 등)", self.step_alias))
         if self.s["systemd"]:
             st.append(("자동 시작 서비스(systemd) 등록", self.step_systemd))
         if self.s["selftest"]:
             st.append(("자가 시험 (selftest.py)", self.step_selftest))
         if self.s["start"] or self.s["systemd"]:
-            st.append(("Guardian·대시보드 실행", self.step_start))
+            st.append(("WARDEN·대시보드 실행", self.step_start))
         return st
 
     # 1
@@ -525,8 +526,9 @@ class Installer:
         dpath = os.path.join(self.target, "dashboard", "dashboard_config.json")
         dash = load_json(dpath, {})
         new_token = not dash.get("token")
+        old_url = dash.pop("guardian_url", None)         # 이름을 바꾸기 전(Guardian) 설정 파일
         dash.update({"host": self.s["host"], "port": int(self.s["port"]),
-                     "guardian_url": dash.get("guardian_url", "http://127.0.0.1:8000")})
+                     "warden_url": dash.get("warden_url", old_url or "http://127.0.0.1:8000")})
         if new_token:
             dash["token"] = secrets.token_urlsafe(12)
         write_json(dpath, dash, 0o600)
@@ -553,9 +555,9 @@ class Installer:
                     continue
                 rel = os.path.relpath(p, self.target).split(os.sep)
                 if rel[0] == "logs":
-                    continue                       # Guardian 이 만든 기록의 권한은 그대로
+                    continue                       # WARDEN 이 만든 기록의 권한은 그대로
                 if f.endswith((".py", ".sh")):
-                    # 탐지 스크립트·플러그인은 실행 권한이 필요 (Guardian·대시보드가 직접 실행)
+                    # 탐지 스크립트·플러그인은 실행 권한이 필요 (WARDEN·대시보드가 직접 실행)
                     os.chmod(p, 0o755 if rel[0] == "rules" or rel[:2] == ["dashboard", "plugins"] else 0o750)
                 elif f in ("dashboard_config.json", "audit.jsonl", "setup_log.txt"):
                     os.chmod(p, 0o600)
@@ -578,7 +580,7 @@ class Installer:
                 with open(path, encoding="utf-8", errors="replace") as f:
                     text = f.read()
             text = re.sub(re.escape(ALIAS_BEGIN) + r".*?" + re.escape(ALIAS_END) + r"\n?", "", text, flags=re.S)
-            text = re.sub(r"(?m)^# Guardian: plugin approval screen\nalias approve=.*\n?", "", text)   # 손으로 넣었던 옛 줄
+            text = re.sub(r"(?m)^# WARDEN: plugin approval screen\nalias approve=.*\n?", "", text)   # 손으로 넣었던 옛 줄
             if text and not text.endswith("\n"):
                 text += "\n"
             with open(path, "w", encoding="utf-8") as f:
@@ -586,7 +588,7 @@ class Installer:
             if not self.env.test:
                 os.chown(path, self.uid, self.gid)
             done.append(rc)
-        self.log(f"단축 명령(approve·gstart·gstop·grestart·gstatus·glog·gunblock)을 {', '.join(done)} 에 넣음 "
+        self.log(f"단축 명령(approve·wstart·wstop·wrestart·wstatus·wlog·wunblock)을 {', '.join(done)} 에 넣음 "
                  f"(새 터미널부터, 지금 창은 source ~/{done[0]})")
         return True
 
@@ -596,22 +598,22 @@ class Installer:
             self.log("연습 모드이거나 systemd 가 없어 건너뜀")
             return True
         kill_matching(self.target, self.log)
-        for name, text in (("guardian.service", UNIT_GUARDIAN), ("guardian-dashboard.service", UNIT_DASHBOARD)):
+        for name, text in (("warden.service", UNIT_WARDEN), ("warden-dashboard.service", UNIT_DASHBOARD)):
             with open(f"/etc/systemd/system/{name}", "w", encoding="utf-8") as f:
                 f.write(text.format(target=self.target, user=self.user))
         run(["systemctl", "daemon-reload"])
-        code, out = run(["systemctl", "enable", "--now", "guardian.service", "guardian-dashboard.service"], timeout=60)
+        code, out = run(["systemctl", "enable", "--now", "warden.service", "warden-dashboard.service"], timeout=60)
         if code != 0:
             self.log("서비스를 켜지 못했습니다: " + out.strip()[-300:])
             return False
-        run(["systemctl", "restart", "guardian.service", "guardian-dashboard.service"], timeout=60)
-        self.log("guardian.service · guardian-dashboard.service 등록 (부팅 때 자동 시작)")
-        self.log("다시 시작: sudo systemctl restart guardian   /   상태: systemctl status guardian")
+        run(["systemctl", "restart", "warden.service", "warden-dashboard.service"], timeout=60)
+        self.log("warden.service · warden-dashboard.service 등록 (부팅 때 자동 시작)")
+        self.log("다시 시작: sudo systemctl restart warden   /   상태: systemctl status warden")
         return True
 
     # 7
     def step_selftest(self):
-        tmp = tempfile.mkdtemp(prefix="guardian_setup_test_")
+        tmp = tempfile.mkdtemp(prefix="warden_setup_test_")
         try:
             for name in os.listdir(self.target):
                 if name in ("logs", "plugins_pending", "__pycache__", "audit.jsonl"):
@@ -659,15 +661,15 @@ class Installer:
             ok = wait_ports([8000, int(self.s["port"])], self.log)
             return ok
         kill_matching(self.target, self.log)
-        launch(self.target, self.user, ("guardian", "dashboard"), self.log)
+        launch(self.target, self.user, ("warden", "dashboard"), self.log)
         return wait_ports([8000, int(self.s["port"])], self.log)
 
 
-SCRIPTS = {"guardian": "guardian.py", "dashboard": os.path.join("dashboard", "server.py")}
+SCRIPTS = {"warden": "warden.py", "dashboard": os.path.join("dashboard", "server.py")}
 
 
-def find_pids(target, which=("guardian", "dashboard")):
-    """설치 위치의 guardian.py / dashboard/server.py 를 돌리는 파이썬 프로세스 {pid: 이름} (/proc 를 직접 읽음)"""
+def find_pids(target, which=("warden", "dashboard")):
+    """설치 위치의 warden.py / dashboard/server.py 를 돌리는 파이썬 프로세스 {pid: 이름} (/proc 를 직접 읽음)"""
     want = {os.path.join(target, SCRIPTS[w]): w for w in which}
     found = {}
     for pid in filter(str.isdigit, os.listdir("/proc")):
@@ -688,7 +690,7 @@ def find_pids(target, which=("guardian", "dashboard")):
 
 
 def launch(target, user, which, log):
-    """Guardian(root)·대시보드(일반 계정)를 터미널과 떨어진 백그라운드로 켠다. 출력은 logs/*.out (600)"""
+    """WARDEN(root)·대시보드(일반 계정)를 터미널과 떨어진 백그라운드로 켠다. 출력은 logs/*.out (600)"""
     old_umask = os.umask(0o077)
     try:
         for name in which:
@@ -696,8 +698,8 @@ def launch(target, user, which, log):
             if os.path.lexists(out):
                 os.unlink(out)
             with open(out, "w") as fh:
-                if name == "guardian":
-                    cmd, cwd = [sys.executable, os.path.join(target, "guardian.py"), "run"], target
+                if name == "warden":
+                    cmd, cwd = [sys.executable, os.path.join(target, "warden.py"), "run"], target
                 else:
                     pw = pwd.getpwnam(user)
                     os.chown(out, pw.pw_uid, pw.pw_gid)
@@ -705,13 +707,13 @@ def launch(target, user, which, log):
                     cwd = os.path.join(target, "dashboard")
                 subprocess.Popen(cmd, cwd=cwd, stdin=subprocess.DEVNULL, stdout=fh, stderr=subprocess.STDOUT,
                                  start_new_session=True)
-            log(f"{'Guardian' if name == 'guardian' else '대시보드'} 켜는 중 (기록: {out})")
+            log(f"{'WARDEN' if name == 'warden' else '대시보드'} 켜는 중 (기록: {out})")
     finally:
         os.umask(old_umask)
 
 
-def kill_matching(target, log, which=("guardian", "dashboard")):
-    """설치 위치의 guardian.py run / dashboard/server.py 프로세스를 끝낸다 (자기 자신은 제외)"""
+def kill_matching(target, log, which=("warden", "dashboard")):
+    """설치 위치의 warden.py run / dashboard/server.py 프로세스를 끝낸다 (자기 자신은 제외)"""
     victims = list(find_pids(target, which))
     for pid in victims:
         try:
@@ -719,7 +721,7 @@ def kill_matching(target, log, which=("guardian", "dashboard")):
         except OSError:
             pass
     if victims:
-        log(f"켜져 있던 {'·'.join('Guardian' if w == 'guardian' else '대시보드' for w in which)} 프로세스 {len(victims)}개를 끝냄")
+        log(f"켜져 있던 {'·'.join('WARDEN' if w == 'warden' else '대시보드' for w in which)} 프로세스 {len(victims)}개를 끝냄")
     deadline = time.time() + 8
     while victims and time.time() < deadline:
         victims = [p for p in victims if os.path.exists(f"/proc/{p}")]
@@ -737,12 +739,12 @@ def wait_ports(ports, log, limit=180):
     while time.time() - start < limit:
         up = listening_ports()
         if all(p in up for p in ports):
-            log(f"실행 확인: Guardian(8000)·대시보드({ports[1]}) 응답 ({int(time.time() - start)}초)")
+            log(f"실행 확인: WARDEN(8000)·대시보드({ports[1]}) 응답 ({int(time.time() - start)}초)")
             return True
         time.sleep(2)
     up = listening_ports()
     log("시간 안에 뜨지 않았습니다: " + ", ".join(f"{p}={'up' if p in up else 'down'}" for p in ports)
-        + "  (설치 위치의 logs/guardian.out, logs/dashboard.out 확인)")
+        + "  (설치 위치의 logs/warden.out, logs/dashboard.out 확인)")
     return False
 
 
@@ -777,9 +779,9 @@ SETTINGS = [
     ("admin_ip", "관리 PC IP", "text", "화이트리스트에 넣어 절대 차단하지 않을 주소"),
     ("dry_run", "시작 모드", "bool", "켜기 = 탐지만(dry-run), 끄기 = 실제 차단. 대시보드 슬라이드로 언제든 바꿈"),
     ("alias", "approve 단축 명령", "bool", "셸에 approve 명령 추가"),
-    ("systemd", "자동 시작 서비스", "bool", "systemd 에 등록해 부팅 때 켜짐 (켜면 sudo systemctl restart guardian 으로 재시작)"),
+    ("systemd", "자동 시작 서비스", "bool", "systemd 에 등록해 부팅 때 켜짐 (켜면 sudo systemctl restart warden 으로 재시작)"),
     ("selftest", "설치 후 자가 시험", "bool", "임시 복사본에서 selftest.py 실행"),
-    ("start", "설치 후 실행", "bool", "Guardian·대시보드 켜기 (이미 켜져 있으면 새 코드로 다시 시작)"),
+    ("start", "설치 후 실행", "bool", "WARDEN·대시보드 켜기 (이미 켜져 있으면 새 코드로 다시 시작)"),
 ]
 BOOL_TEXT = {"dry_run": ("탐지만 (dry-run)", "실제 차단"), }
 
@@ -852,7 +854,7 @@ class SetupTui:
         else:
             v = self.edit_text(y, label, str(self.s[key]))
             if key == "port" and not (v.isdigit() and 1 <= int(v) <= 65535 and int(v) != 8000):
-                return "포트는 1~65535 의 숫자여야 하고 8000(Guardian API)은 쓸 수 없습니다"
+                return "포트는 1~65535 의 숫자여야 하고 8000(WARDEN API)은 쓸 수 없습니다"
             if key == "admin_ip" and v:
                 try:
                     ipaddress.ip_address(v)
@@ -904,7 +906,7 @@ class SetupTui:
         while True:
             self.scr.erase()
             h, w = self.scr.getmaxyx()
-            self.put(0, 0, " Guardian 설치", "head")
+            self.put(0, 0, " WARDEN 설치", "head")
             self.put(0, 22, f"설치 계정: {self.env.user}" + ("   [연습 모드: 패키지·서비스·실행은 건너뜀]" if self.env.test else ""), "dim")
             lines = self.overview_lines(sel)
             room = max(3, h - 4)                     # 제목 1줄 + 빈 줄 + 아래 안내 2줄
@@ -965,7 +967,7 @@ class SetupTui:
         def draw():
             self.scr.erase()
             h, _ = self.scr.getmaxyx()
-            self.put(0, 0, " Guardian 설치 중", "head")
+            self.put(0, 0, " WARDEN 설치 중", "head")
             for i, (name, _) in enumerate(steps):
                 mark = {"…": "  ", "▶": "> ", "✔": "O ", "✘": "X ", "-": "- "}[state[i]]
                 kind = {"✔": "ok", "✘": "bad", "▶": "warn"}.get(state[i], "dim")
@@ -1046,7 +1048,7 @@ def summary_lines(env, s, ok_all):
         rc = "~/.zshrc" if env.shell.endswith("zsh") else "~/.bashrc"
         out.append((f"승인 화면    approve   (지금 창에서는 먼저 source {rc})", ""))
     if s["systemd"]:
-        out.append(("다시 시작    sudo systemctl restart guardian guardian-dashboard", ""))
+        out.append(("다시 시작    sudo systemctl restart warden warden-dashboard", ""))
     else:
         out.append(("다시 시작    sudo python3 setup.py 를 다시 실행하거나, 기존 방식(startlab)으로", ""))
     out.append((f"설치 기록    {target}/setup_log.txt", "dim"))
@@ -1072,7 +1074,7 @@ def save_log(env, s, lines):
 # ───────────────────────── 시작 ─────────────────────────
 
 def main():
-    ap = argparse.ArgumentParser(description="Guardian 설치 도구 (sudo 로 실행)")
+    ap = argparse.ArgumentParser(description="WARDEN 설치 도구 (sudo 로 실행)")
     ap.add_argument("--yes", action="store_true", help="화면 없이 기본값으로 설치")
     ap.add_argument("--test-home", metavar="DIR", help="연습 모드: root 없이 DIR 를 홈 폴더로 보고 설치 (패키지·서비스·실행 건너뜀)")
     a = ap.parse_args()

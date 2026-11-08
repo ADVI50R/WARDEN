@@ -1,21 +1,21 @@
-# Guardian 추가 기능 로드맵
+# WARDEN 추가 기능 로드맵
 
 **기한: 12주차 (2026-11-23, 월)** — 작성일 2026-10-19. 아래 우선순위대로 진행하고, 끝낸 항목은 `[x]` 로 바꾼다.
 
 ## 먼저 처리할 일 (기능 개발 전에)
-- [x] (2026-11-07 이후 여러 번 재시작, `/api/packets`·`/api/event_analysis` 동작 확인) 서버의 root Guardian 재시작: 서버 터미널에서 `sudo pkill -f "guardian.py run"` (사용자가 직접). 그 뒤 Claude 가 다시 켜고 `/api/packets`, `/api/event_analysis` 동작 확인. 재시작 전까지 패킷 보기·"정보" 분석은 서버에서 동작하지 않음 (코드는 이미 서버에 복사됨)
-- [x] (2026-11-08 systemctl 서비스 제어만 허용으로 교체) sudoers 규칙 좁히기 (사용자 결정): `/etc/sudoers.d/guardian-lab` 의 `python3 /home/kali/guardian/dashboard/*` 는 와일드카드라 `..` 경로로 dashboard 밖의 파이썬 파일도 root 로 실행될 수 있어 보임 (직접 확인하지는 않음). 정확한 파일 이름으로 좁히는 것을 권장. 승인된 플러그인은 `kali` 권한으로 실행되므로 이 규칙이 넓을수록 업로드 승인 검토가 중요해짐
+- [x] (2026-11-07 이후 여러 번 재시작, `/api/packets`·`/api/event_analysis` 동작 확인) 서버의 root WARDEN 재시작: 서버 터미널에서 `sudo pkill -f "warden.py run"` (사용자가 직접). 그 뒤 Claude 가 다시 켜고 `/api/packets`, `/api/event_analysis` 동작 확인. 재시작 전까지 패킷 보기·"정보" 분석은 서버에서 동작하지 않음 (코드는 이미 서버에 복사됨)
+- [x] (2026-11-08 systemctl 서비스 제어만 허용으로 교체) sudoers 규칙 좁히기 (사용자 결정): `/etc/sudoers.d/warden-lab` 의 `python3 /home/kali/warden/dashboard/*` 는 와일드카드라 `..` 경로로 dashboard 밖의 파이썬 파일도 root 로 실행될 수 있어 보임 (직접 확인하지는 않음). 정확한 파일 이름으로 좁히는 것을 권장. 승인된 플러그인은 `kali` 권한으로 실행되므로 이 규칙이 넓을수록 업로드 승인 검토가 중요해짐
 - [x] (2026-11-07 공격자 VM 실제 공격으로 확인) 새 기능(패킷 보기·정보 분석·업로드 승인)을 실제 공격 테스트로 한 번 확인 (`attack_test_guide.md`)
 
 ## 2026-11-07 점검 결과 (기능 개발보다 먼저)
 코드를 다시 읽고 서버 VM·미리보기에서 시험한 결과. "실측"이 아닌 항목은 코드로만 확인했다.
 
 ### 급한 것
-- [x] 자동 시작이 Guardian 을 켜지 못함: `startlab.ps1` 의 `pgrep -f` 자기 매치 (실측, 수정 완료. 실제 재부팅 확인은 남음)
+- [x] 자동 시작이 WARDEN 을 켜지 못함: `startlab.ps1` 의 `pgrep -f` 자기 매치 (실측, 수정 완료. 실제 재부팅 확인은 남음)
 - [x] **승인 우회**: `POST /api/rules` 의 `command` 에 `.//bin/sh` 를 넣으면 검사를 통과해 절대 경로로 실행됨 (실측: `.//bin/echo`). 토큰만으로 승인 없이 코드 실행. 경로 검사 강화, API 로 script 규칙 생성·`command` 변경 금지, 수정 창의 스크립트 칸 제거
-- [x] Guardian API(8000)에 인증이 없고 CORS 가 `*`: 대시보드가 프록시하므로 CORS 는 필요 없음
-- [x] (2026-11-08 교체: python 실행 허용 제거, 서비스 제어만. 남은 한계 — kali 가 guardian.py 를 고친 뒤 서비스 재시작하면 root 로 실행 — 는 사용자 결정으로 문서화) **sudoers (사용자 결정)**: `python3 selftest.py` 는 경로가 없어 어느 폴더의 파일이든 root 로 실행되고, `guardian.py` 는 `kali` 가 고칠 수 있어 `kali` 권한이면 비밀번호 없이 root (`sudo -l` 로 확인, 실행은 안 함). root 소유 위치 + `systemctl` 만 허용 권장
-- [x] Guardian 이 죽어도 화면에 크게 안 나옴: "정상 (Normal)" 이 고정 문구, 옛 숫자 유지 (실측)
+- [x] WARDEN API(8000)에 인증이 없고 CORS 가 `*`: 대시보드가 프록시하므로 CORS 는 필요 없음
+- [x] (2026-11-08 교체: python 실행 허용 제거, 서비스 제어만. 남은 한계 — kali 가 warden.py 를 고친 뒤 서비스 재시작하면 root 로 실행 — 는 사용자 결정으로 문서화) **sudoers (사용자 결정)**: `python3 selftest.py` 는 경로가 없어 어느 폴더의 파일이든 root 로 실행되고, `warden.py` 는 `kali` 가 고칠 수 있어 `kali` 권한이면 비밀번호 없이 root (`sudo -l` 로 확인, 실행은 안 함). root 소유 위치 + `systemctl` 만 허용 권장
+- [x] WARDEN 이 죽어도 화면에 크게 안 나옴: "정상 (Normal)" 이 고정 문구, 옛 숫자 유지 (실측)
 - [x] 시간대: 화면은 보는 사람의 시간으로 표시하게 고침
 - [x] (2026-11-07 사용자가 변경, 서버 +09:00 확인) 서버 시간대 변경 (사용자): 서버에서 `sudo timedatectl set-timezone Asia/Seoul`
 
@@ -47,13 +47,13 @@
 - [x] 규칙 카드의 탐지 횟수·마지막 탐지 시각, 시연 전 점검 화면
 - [x] 화이트리스트 보기, 자기 차단 경고 (읽기·경고만)
 - [x] 화면에서 화이트리스트 수정 (2026-11-07 사용자 승인: 확인 창·감사 기록·서버 자신 주소 보호)
-- [x] 긴급 전체 해제 (2026-11-08, 사용자 결정: 서버 터미널 전용) `gunblock` = `guardianctl.py unblock-all`. 목록 확인 + yes, Guardian 응답 시 API 로 해제, 무응답 시 `iptables -F GUARDIAN`, 감사 기록. 대시보드에는 안내 문구만
-- [x] Guardian 자기 상태: CPU·메모리·처리 못 한 패킷 수
+- [x] 긴급 전체 해제 (2026-11-08, 사용자 결정: 서버 터미널 전용) `wunblock` = `wardenctl.py unblock-all`. 목록 확인 + yes, WARDEN 응답 시 API 로 해제, 무응답 시 `iptables -F WARDEN`, 감사 기록. 대시보드에는 안내 문구만
+- [x] WARDEN 자기 상태: CPU·메모리·처리 못 한 패킷 수
 - [x] 인쇄용 보고서 한 장
 
 ## 1순위 (효과 큰 것)
-- [x] **1. SSH 로그인 성공 탐지**: `/var/log/auth.log` 의 `Accepted` 기록을 읽어, 무차별 대입 뒤에 로그인이 성공했는지 알려 준다 (성공하면 최고 위험도). 현재 "정보" 분석 창은 "로그인 성공 여부는 Guardian 이 알 수 없다"고만 안내함. Guardian 이 root 로 돌고 있어 로그 읽기는 가능. 읽는 방식(파일 tail vs journald)과 Kali 기본 로그 설정 확인이 필요
-- [x] (2026-11-08 systemd 서비스 등록·Restart=on-failure, 동작 확인) **2. 감시 자동 복구와 상태 표시** (상태 표시·`startlab.ps1` 포트 점검은 끝남, 2026-11-08 실제 재부팅으로 자동 복구 확인. 남은 것: systemd 자동 재시작 — sudoers 결정과 함께, `setup.py` 의 '자동 시작 서비스' 로 선택 가능): 2026-10-19 에 Guardian·대시보드가 내려가 있었는데 `startlab.log` 점검은 `up` 이었음 (점검 방식이 부정확). systemd 서비스로 자동 재시작하고, 화면 맨 위에 "Guardian 응답 없음"을 바로 표시. `GuardianLabStart` 의 점검도 실제 포트 응답으로 바꾸기
+- [x] **1. SSH 로그인 성공 탐지**: `/var/log/auth.log` 의 `Accepted` 기록을 읽어, 무차별 대입 뒤에 로그인이 성공했는지 알려 준다 (성공하면 최고 위험도). 현재 "정보" 분석 창은 "로그인 성공 여부는 WARDEN 이 알 수 없다"고만 안내함. WARDEN 이 root 로 돌고 있어 로그 읽기는 가능. 읽는 방식(파일 tail vs journald)과 Kali 기본 로그 설정 확인이 필요
+- [x] (2026-11-08 systemd 서비스 등록·Restart=on-failure, 동작 확인) **2. 감시 자동 복구와 상태 표시** (상태 표시·`startlab.ps1` 포트 점검은 끝남, 2026-11-08 실제 재부팅으로 자동 복구 확인. 남은 것: systemd 자동 재시작 — sudoers 결정과 함께, `setup.py` 의 '자동 시작 서비스' 로 선택 가능): 2026-10-19 에 WARDEN·대시보드가 내려가 있었는데 `startlab.log` 점검은 `up` 이었음 (점검 방식이 부정확). systemd 서비스로 자동 재시작하고, 화면 맨 위에 "WARDEN 응답 없음"을 바로 표시. `GuardianLabStart` 의 점검도 실제 포트 응답으로 바꾸기
 - [x] **3. 감사 로그**: 차단·해제·규칙 수정·플러그인 업로드/삭제·dry-run 전환을 "언제, 어느 IP 에서" 했는지 기록하고 화면에 표시. 토큰 하나로 모든 조작이 가능하므로 업로드 기능과 같이 갈 것
 
 ## 2순위 (보고서·시연 가산점)

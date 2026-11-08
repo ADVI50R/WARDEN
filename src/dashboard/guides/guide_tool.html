@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<title>Guardian 도구(플러그인) 올리기 안내</title>
+<title>WARDEN 도구(플러그인) 올리기 안내</title>
 <style>
 @page { size: A4; margin: 16mm 16mm 18mm; }
 * { box-sizing: border-box; }
@@ -29,7 +29,7 @@ li { margin-bottom: 0.8mm; }
 <body>
 
 <h1>🧰 도구(플러그인) 올리기 안내</h1>
-<p class="sub">Guardian 대시보드 &gt; 도구 메뉴 &gt; "도구 올리기" 에서 쓰는 방법입니다. 이 문서는 도구 올리기용이고, 탐지 규칙(플러그인 방식)은 "탐지 규칙 올리기 안내" PDF를 보세요.</p>
+<p class="sub">WARDEN 대시보드 &gt; 도구 메뉴 &gt; "도구 올리기" 에서 쓰는 방법입니다. 이 문서는 도구 올리기용이고, 탐지 규칙(플러그인 방식)은 "탐지 규칙 올리기 안내" PDF를 보세요.</p>
 
 <h2>1. 한눈에 보기</h2>
 <p><b>도구</b>는 대시보드에서 버튼으로 실행하고 결과를 화면에서 보는 작은 프로그램입니다 (핑 확인, 시스템 상태 보기 등). 도구 하나는 <b>설정 파일 1개(<code>plugin.json</code>) + 스크립트 1개 이상</b>입니다.</p>
@@ -123,7 +123,7 @@ gui(type="alert", level="warning", text="디스크가 90% 를 넘었습니다") 
 <h3>(2) 샌드박스로 시험 (선택)</h3>
 <p>승인 대기 항목의 <b>"🧪 샌드박스로 실행"</b>은 설치하지 않고 한 번만 돌려 봅니다. 네트워크가 없고, 파일은 읽기 전용이고, 메모리·프로세스 수·시간이 제한된 격리 상태입니다. 결과는 저장되지 않습니다. (격리 상태라서 핑처럼 네트워크가 필요한 도구는 시험에서 실패할 수 있습니다.)</p>
 <h3>(3) 승인 (서버 터미널에서만)</h3>
-<pre>cd ~/guardian
+<pre>cd ~/warden
 python3 dashboard/approve_plugin.py list              # 승인 대기 목록
 python3 dashboard/approve_plugin.py show ping_check    # 파일 내용과 주의할 패턴 보기
 python3 dashboard/approve_plugin.py approve ping_check # 내용을 다시 보여 주고 해시를 입력하면 승인

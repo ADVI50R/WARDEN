@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<title>Guardian 탐지 규칙(플러그인 방식) 올리기 안내</title>
+<title>WARDEN 탐지 규칙(플러그인 방식) 올리기 안내</title>
 <style>
 @page { size: A4; margin: 16mm 16mm 18mm; }
 * { box-sizing: border-box; }
@@ -32,21 +32,21 @@ li { margin-bottom: 0.8mm; }
 <body>
 
 <h1>🧩 탐지 규칙(플러그인 방식) 올리기 안내</h1>
-<p class="sub">Guardian 대시보드 &gt; 탐지 규칙 메뉴 &gt; "플러그인 방식 규칙 올리기" 에서 쓰는 방법입니다. 일반 도구는 "도구 올리기 안내" PDF를 보세요.</p>
+<p class="sub">WARDEN 대시보드 &gt; 탐지 규칙 메뉴 &gt; "플러그인 방식 규칙 올리기" 에서 쓰는 방법입니다. 일반 도구는 "도구 올리기 안내" PDF를 보세요.</p>
 
 <h2>1. 플러그인 방식 규칙이란?</h2>
-<p>Guardian 의 탐지 규칙은 두 가지입니다.</p>
+<p>WARDEN 의 탐지 규칙은 두 가지입니다.</p>
 <table>
 <tr><th style="width:24%">방식</th><th>누가 판정하나</th></tr>
-<tr><td>🔥 방화벽 방식</td><td>Guardian 이 지나가는 <b>패킷</b>을 직접 보고 판정 (포트 스캔, SYN 플러드 등). 대시보드의 "새 규칙 추가" 양식으로 만들 수 있습니다.</td></tr>
-<tr><td>🧩 플러그인 방식</td><td>패킷 대신 <b>내가 만든 스크립트</b>가 판정합니다. Guardian 이 정해진 주기마다 스크립트를 실행하고, 스크립트가 "이 IP 가 수상하다" 라고 출력하면 Guardian 이 알림·차단을 합니다. (예: 로그인 기록 분석, 동시 접속 수 확인)</td></tr>
+<tr><td>🔥 방화벽 방식</td><td>WARDEN 이 지나가는 <b>패킷</b>을 직접 보고 판정 (포트 스캔, SYN 플러드 등). 대시보드의 "새 규칙 추가" 양식으로 만들 수 있습니다.</td></tr>
+<tr><td>🧩 플러그인 방식</td><td>패킷 대신 <b>내가 만든 스크립트</b>가 판정합니다. WARDEN 이 정해진 주기마다 스크립트를 실행하고, 스크립트가 "이 IP 가 수상하다" 라고 출력하면 WARDEN 이 알림·차단을 합니다. (예: 로그인 기록 분석, 동시 접속 수 확인)</td></tr>
 </table>
 <div class="flow">
-  <div>Guardian 이<br><b>interval_sec</b> 마다<br>스크립트 실행</div><div class="arrow">▶</div>
+  <div>WARDEN 이<br><b>interval_sec</b> 마다<br>스크립트 실행</div><div class="arrow">▶</div>
   <div>스크립트가<br><b>판정만</b> 출력<br>(JSON 한 줄씩)</div><div class="arrow">▶</div>
-  <div>Guardian 이<br>화이트리스트 확인 ·<br>알림 · (선택) 차단</div>
+  <div>WARDEN 이<br>화이트리스트 확인 ·<br>알림 · (선택) 차단</div>
 </div>
-<div class="note"><b>역할 분담이 중요합니다.</b> 스크립트는 <b>판정만</b> 합니다. 차단(iptables)·화이트리스트 확인·로그 기록은 전부 Guardian 이 합니다. 스크립트가 직접 방화벽을 건드리지 않습니다.</div>
+<div class="note"><b>역할 분담이 중요합니다.</b> 스크립트는 <b>판정만</b> 합니다. 차단(iptables)·화이트리스트 확인·로그 기록은 전부 WARDEN 이 합니다. 스크립트가 직접 방화벽을 건드리지 않습니다.</div>
 
 <h2>2. 올리는 방법 한눈에</h2>
 <div class="steps">
@@ -56,7 +56,7 @@ li { margin-bottom: 0.8mm; }
   <div class="step"><b>④ 승인</b>관리자가 서버 터미널에서 코드를 읽고 승인하면 <b>꺼진 상태</b>로 설치됩니다.</div>
   <div class="step"><b>⑤ 켜기</b>탐지 규칙 화면의 카드에서 직접 "켜기".</div>
 </div>
-<div class="note"><b>왜 이렇게 번거롭나요?</b> 규칙 스크립트는 Guardian 이 계속 자동으로 실행하는 코드라서, 올리는 순간 실행되면 위험합니다. 그래서 (1) 올려도 실행되지 않고, (2) 승인은 서버 터미널에서만 가능하고, (3) 승인 뒤에도 꺼진 상태로 시작합니다. 대시보드에는 승인 버튼이 없습니다.</div>
+<div class="note"><b>왜 이렇게 번거롭나요?</b> 규칙 스크립트는 WARDEN 이 계속 자동으로 실행하는 코드라서, 올리는 순간 실행되면 위험합니다. 그래서 (1) 올려도 실행되지 않고, (2) 승인은 서버 터미널에서만 가능하고, (3) 승인 뒤에도 꺼진 상태로 시작합니다. 대시보드에는 승인 버튼이 없습니다.</div>
 
 <h2>3. 올릴 파일</h2>
 <table>
@@ -88,13 +88,13 @@ li { margin-bottom: 0.8mm; }
 <tr><td><code>id</code></td><td>필수</td><td>영소문자로 시작, 영소문자·숫자·밑줄만, 40자까지. 기본 탐지기 이름(<code>port_scan</code> <code>syn_flood</code> <code>icmp_flood</code> <code>ssh_bruteforce</code> <code>ssh_login_success</code> <code>arp_spoof</code> <code>exfiltration</code>)과 예약어(<code>unblock</code> <code>manual_block</code> <code>syn_flood_distributed</code> <code>rule_toggle</code>)는 쓸 수 없습니다.</td></tr>
 <tr><td><code>detector</code></td><td>필수</td><td>반드시 <code>"script"</code>.</td></tr>
 <tr><td><code>command</code></td><td>필수</td><td>실행할 명령 목록 (1~6개). <b>첫 항목은 <code>./파일이름.py</code> (또는 <code>.sh</code>)</b>, 뒤는 스크립트에 넘길 인자입니다. <code>..</code> 금지. <code>./</code> 로 쓴 파일은 같이 올려야 합니다. <b>승인 뒤에는 화면에서 바꿀 수 없습니다</b> (바꾸려면 새로 올려서 승인).</td></tr>
-<tr><td><code>interval_sec</code></td><td>필수</td><td>실행 주기 (5~3600초). Guardian 이 이 간격마다 스크립트를 실행합니다.</td></tr>
+<tr><td><code>interval_sec</code></td><td>필수</td><td>실행 주기 (5~3600초). WARDEN 이 이 간격마다 스크립트를 실행합니다.</td></tr>
 <tr><td><code>timeout_sec</code></td><td>선택</td><td>한 번 실행의 시간 제한 (1~60초, 기본 10). 넘기면 강제 종료됩니다. 스크립트는 주기 안에 끝나게 만드세요.</td></tr>
 <tr><td><code>name</code> · <code>description</code></td><td>권장</td><td>카드에 보일 이름(60자까지)·설명(200자까지).</td></tr>
 <tr><td><code>tags</code></td><td>선택</td><td>카드 이름 밑에 <b>#포트공격</b> 처럼 보일 태그. 6개까지, 공백 없이 20자까지.</td></tr>
 <tr><td><code>severity</code></td><td>선택</td><td><code>info</code>(Low) / <code>warning</code>(Medium, 기본) / <code>critical</code>(Critical).</td></tr>
 <tr><td><code>block</code></td><td>선택</td><td><code>true</code> 면 스크립트가 알린 IP 를 방화벽으로 차단합니다 (기본 <code>false</code> = 알림만). 아래 "차단 주의" 참고.</td></tr>
-<tr><td><code>block_duration_sec</code> · <code>block_permanent</code></td><td>선택</td><td>차단 기간(초) / 영구 차단. 안 쓰면 Guardian 의 기본 차단 시간을 씁니다.</td></tr>
+<tr><td><code>block_duration_sec</code> · <code>block_permanent</code></td><td>선택</td><td>차단 기간(초) / 영구 차단. 안 쓰면 WARDEN 의 기본 차단 시간을 씁니다.</td></tr>
 <tr><td><code>notify</code></td><td>선택</td><td>대시보드 알림. <code>{"popup": true, "sound": false}</code> 처럼 팝업·소리를 따로 정합니다. 생략하면 위험도 기본값 (Critical = 팝업+소리, Medium = 팝업, Low = 알림 없음). 승인 뒤 ⚙ 에서도 바꿀 수 있습니다.</td></tr>
 <tr><td><code>enabled</code></td><td>무시됨</td><td>써도 무시되고 <b>항상 꺼진 상태</b>로 설치됩니다.</td></tr>
 </table>
@@ -112,14 +112,14 @@ li { margin-bottom: 0.8mm; }
 <li><b>아무것도 출력하지 않으면 "이상 없음"</b>입니다.</li>
 <li>JSON 이 아닌 줄(디버그 출력 등)은 조용히 무시됩니다. 판정 외의 말은 <code>stderr</code> 로 쓰세요.</li>
 <li>한 번 실행에 최대 <b>200줄</b>, 한 줄 <b>4096바이트</b> 까지만 읽고 나머지는 버립니다.</li>
-<li>종료 코드가 0 이 아니고 출력도 없으면 "오류"로 보고 Guardian 터미널에 한 번만 표시합니다 (같은 오류는 반복해서 찍지 않음).</li>
+<li>종료 코드가 0 이 아니고 출력도 없으면 "오류"로 보고 WARDEN 터미널에 한 번만 표시합니다 (같은 오류는 반복해서 찍지 않음).</li>
 <li>같은 규칙·같은 IP 의 알림은 설정된 시간(기본 30초) 안에는 한 번만 기록됩니다.</li>
 </ul>
 
 <h2>6. 실행 환경</h2>
 <ul>
 <li>스크립트는 서버의 <code>rules/</code> 폴더에서 실행됩니다 (작업 폴더가 <code>rules/</code>).</li>
-<li>Guardian 은 root 로 돌지만, 스크립트는 <b>일반 계정(<code>kali</code>) 권한으로 낮춰서</b> 실행됩니다. root 권한이 필요한 파일(일부 시스템 로그 등)은 읽지 못할 수 있으니, 승인 전에 서버에서 그 계정으로 읽히는지 확인하세요.</li>
+<li>WARDEN 은 root 로 돌지만, 스크립트는 <b>일반 계정(<code>kali</code>) 권한으로 낮춰서</b> 실행됩니다. root 권한이 필요한 파일(일부 시스템 로그 등)은 읽지 못할 수 있으니, 승인 전에 서버에서 그 계정으로 읽히는지 확인하세요.</li>
 <li>승인하면 스크립트는 실행 권한이 자동으로 붙어(<code>755</code>) 설치됩니다. 첫 줄에 <code>#!/usr/bin/env python3</code> 를 쓰는 것을 권장합니다.</li>
 </ul>
 
@@ -150,7 +150,7 @@ for ip, n in count.items():
 <h3>(2) 샌드박스로 시험 (선택)</h3>
 <p>승인 대기 항목의 <b>"🧪 샌드박스로 실행"</b>은 설치 없이 스크립트를 한 번만 돌려 출력이 약속대로(JSON 한 줄씩) 나오는지 볼 수 있습니다. 네트워크 없음 · 파일 읽기 전용 · 메모리·시간 제한. 결과는 저장되지 않습니다.</p>
 <h3>(3) 승인 (서버 터미널에서만)</h3>
-<pre>cd ~/guardian
+<pre>cd ~/warden
 python3 dashboard/approve_plugin.py list                 # 승인 대기 목록 ([규칙] / [도구] 표시)
 python3 dashboard/approve_plugin.py show many_connections    # 파일 내용과 주의할 패턴 보기
 python3 dashboard/approve_plugin.py approve many_connections # 내용을 다시 보여 주고 해시를 입력하면 승인
@@ -174,7 +174,7 @@ python3 dashboard/approve_plugin.py reject many_connections  # 거절(삭제)</p
 <tr><td>interval_sec 는 5~3600 사이의 정수</td><td><code>interval_sec</code> 를 넣고 범위를 지키세요 (필수 항목).</td></tr>
 <tr><td>rules/ 에 같은 이름의 파일이 이미 있습니다</td><td><code>id</code> 나 스크립트 파일 이름을 바꾸세요 (규칙 id 를 접두어로).</td></tr>
 <tr><td>같은 id 의 다른 종류가 승인 대기 중</td><td>먼저 삭제하거나 다른 <code>id</code> 를 쓰세요.</td></tr>
-<tr><td>(켰는데 아무 일도 안 일어남)</td><td>스크립트가 정말 판정을 출력하는지(샌드박스·서버에서 직접 실행), 출력이 JSON 한 줄씩인지, <code>source</code> 가 올바른 IP 인지 확인하세요. 오류는 Guardian 터미널에 한 번만 표시됩니다.</td></tr>
+<tr><td>(켰는데 아무 일도 안 일어남)</td><td>스크립트가 정말 판정을 출력하는지(샌드박스·서버에서 직접 실행), 출력이 JSON 한 줄씩인지, <code>source</code> 가 올바른 IP 인지 확인하세요. 오류는 WARDEN 터미널에 한 번만 표시됩니다.</td></tr>
 </table>
 
 <h2>10. 올리기 전 점검표</h2>

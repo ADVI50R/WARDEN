@@ -1,5 +1,5 @@
 #!/bin/bash
-# Guardian 공격 시험 자동 실행 (공격자 VM 192.168.56.20 에서만, 실습망 lab 안에서만 사용)
+# WARDEN 공격 시험 자동 실행 (공격자 VM 192.168.56.20 에서만, 실습망 lab 안에서만 사용)
 # attack_test_guide.md 의 root 가 필요한 시험(잘 안 보이는 스캔, 핑·SYN 플러드, ARP 스푸핑, 다른 IP 로 들어오기)을
 # 순서대로 실행한다. 같은 알림은 30초에 한 번만 기록되므로 시험 사이에 기다린다.
 #   사용법:  sudo bash ~/attack_auto.sh
@@ -20,7 +20,7 @@ trap cleanup EXIT INT TERM
 step() { echo; echo "[$(date +%T)] $1"; }
 pause() { echo "    ... ${WAIT}초 기다림 (같은 알림은 30초에 한 번만 기록됨)"; sleep "$WAIT"; }
 
-echo "Guardian 공격 시험 시작: $(date '+%F %T')  (대상 $SERVER, 약 5분)"
+echo "WARDEN 공격 시험 시작: $(date '+%F %T')  (대상 $SERVER, 약 5분)"
 
 step "1/8 NULL 스캔 (플래그 없는 패킷)"
 nmap -sN -p 1-100 "$SERVER" | tail -n 1

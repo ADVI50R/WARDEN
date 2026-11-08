@@ -1,11 +1,11 @@
-# 공격 테스트 가이드 (Guardian 탐지 확인용)
+# 공격 테스트 가이드 (WARDEN 탐지 확인용)
 
 공격자 VM(`192.168.56.20`)에서 보안 서버(`192.168.56.10`)로만 실행합니다. 둘 다 VirtualBox 내부 네트워크 `lab` 안의 자기 소유 VM이고,
 인터넷과는 끊어져 있습니다. 여기 적힌 명령은 이 실습 네트워크 밖에서는 쓰지 마세요.
 
 ## 준비
 
-1. 보안 서버에서 `sudo python3 guardian.py` 와 `python3 dashboard/server.py` 가 둘 다 실행 중인지 확인
+1. 보안 서버에서 `sudo python3 warden.py` 와 `python3 dashboard/server.py` 가 둘 다 실행 중인지 확인
 2. Windows 10 브라우저로 대시보드(`http://192.168.57.10:8080`) 를 열어 두고, "🚨 실시간 공격 탐지 로그" 를 보면서 테스트
 3. "관제 서버 상태" 슬라이드가 **탐지만 (dry-run)** 인지 확인 (처음엔 이 상태로 전부 확인하고, 마지막에 "실제 차단" 으로 한 번 더 확인)
 4. 같은 공격을 30초 안에 다시 하면 같은 알림은 또 뜨지 않습니다 (쿨다운). 결과가 안 보이면 30초 기다렸다가 다시 시도하세요
@@ -68,7 +68,7 @@ for i in $(seq 1 6); do nc -z -w1 192.168.56.10 23; done
 
 ## 6. ARP 스푸핑 (`arp_spoof`) — 선택
 
-같은 IP의 MAC 주소가 바뀌면 탐지됩니다. Guardian 은 "처음 본 IP-MAC 조합"을 정상으로 기억하므로, 같은 IP 를 **서로 다른 MAC** 으로 두 번 알려야 합니다.
+같은 IP의 MAC 주소가 바뀌면 탐지됩니다. WARDEN 은 "처음 본 IP-MAC 조합"을 정상으로 기억하므로, 같은 IP 를 **서로 다른 MAC** 으로 두 번 알려야 합니다.
 `arpspoof` 는 항상 공격자 자신의 MAC 만 보내서 두 번 돌려도 MAC 이 같아 잡히지 않습니다. 칼리에 기본으로 있는 scapy 로 직접 보냅니다 (인터넷 불필요):
 
 ```bash
@@ -76,7 +76,7 @@ sudo python3 -c "from scapy.all import *; [sendp(Ether(dst='ff:ff:ff:ff:ff:ff')/
 ```
 
 `192.168.56.99` 는 없는 장비여도 됩니다. 첫 번째 MAC 이 "정상"으로 기록되고, 두 번째 MAC 에서 바뀐 것으로 잡힙니다.
-진짜 중간자 공격처럼 보이고 싶으면 `sudo arpspoof -i eth0 -t 192.168.56.10 192.168.56.1` 도 있지만, 그 IP 의 원래 MAC 을 Guardian 이 먼저 알고 있어야 탐지됩니다.
+진짜 중간자 공격처럼 보이고 싶으면 `sudo arpspoof -i eth0 -t 192.168.56.10 192.168.56.1` 도 있지만, 그 IP 의 원래 MAC 을 WARDEN 이 먼저 알고 있어야 탐지됩니다.
 
 **예상 결과**: `arp_spoof` / Critical
 
@@ -126,7 +126,7 @@ sudo ip route del 192.168.57.0/24
 **확인:** 포트 스캔이 탐지됩니다. 포트가 열려 있다고 나오면 관리망 주소가 감시망에서도 닿는다는 뜻입니다 (대시보드 8080 포함). 토큰으로 보호되지만 망이 분리된 것은 아닙니다.
 
 ## 11. 슬로로리스 연결 고갈 (`slowloris`, 플러그인 방식 규칙)
-규칙 파일은 저장소의 `docs/examples/slowloris_rule/` (`rule.json`, `slowloris_check.py`) 에 있습니다. 대시보드 "🧪 탐지 규칙 → 📤 플러그인 방식 규칙 올리기"로 두 파일을 올리고, 서버 터미널에서 `python3 ~/guardian/dashboard/approve_plugin.py approve slowloris` 로 승인한 뒤 화면에서 켭니다.
+규칙 파일은 저장소의 `docs/examples/slowloris_rule/` (`rule.json`, `slowloris_check.py`) 에 있습니다. 대시보드 "🧪 탐지 규칙 → 📤 플러그인 방식 규칙 올리기"로 두 파일을 올리고, 서버 터미널에서 `python3 ~/warden/dashboard/approve_plugin.py approve slowloris` 로 승인한 뒤 화면에서 켭니다.
 
 서버 (시험용 웹 서버, 5분 뒤 저절로 꺼짐):
 ```bash

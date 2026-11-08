@@ -20,7 +20,7 @@ import time
 BASE = os.path.dirname(os.path.abspath(__file__))
 PLUGIN_DIR = os.path.join(BASE, "plugins")
 PENDING_DIR = os.path.join(os.path.dirname(BASE), "plugins_pending")      # dashboard/ 밖에 둠
-RULES_DIR = os.path.join(os.path.dirname(BASE), "rules")                  # 플러그인 방식 규칙의 설치 위치 (Guardian 이 읽음)
+RULES_DIR = os.path.join(os.path.dirname(BASE), "rules")                  # 플러그인 방식 규칙의 설치 위치 (WARDEN 이 읽음)
 
 ID_RE = re.compile(r"^[a-z][a-z0-9_]{0,39}$")
 PARAM_RE = re.compile(r"^[a-z][a-z0-9_]{0,19}$")
@@ -34,7 +34,7 @@ TOOL_MANIFEST, RULE_MANIFEST = "plugin.json", "rule.json"
 RULE_KEYS = {"id", "detector", "name", "description", "tags", "notify", "enabled", "severity", "block", "block_duration_sec",
              "block_permanent", "command", "interval_sec", "timeout_sec"}
 RESERVED_RULE_IDS = {"port_scan", "syn_flood", "icmp_flood", "ssh_bruteforce", "ssh_login_success", "arp_spoof", "exfiltration",
-                     "unblock", "manual_block", "syn_flood_distributed", "rule_toggle"}      # guardian.py 가 쓰는 이름
+                     "unblock", "manual_block", "syn_flood_distributed", "rule_toggle"}      # warden.py 가 쓰는 이름
 
 # 검토할 때 눈에 띄게 표시할 패턴 (정규식, 설명)
 RISKY = [
@@ -49,7 +49,7 @@ RISKY = [
     (r"\bchmod\b|\bchown\b|\bsetuid\b", "권한 변경"),
     (r"base64|pickle|marshal|zlib\.decompress", "난독화·직렬화 의심"),
     (r"\.\./", "상위 폴더 접근"),
-    (r"guardian\.py|dashboard_config|sudoers|iptables", "Guardian·토큰·방화벽·sudo 설정 접근"),
+    (r"warden\.py|dashboard_config|sudoers|iptables", "WARDEN·토큰·방화벽·sudo 설정 접근"),
 ]
 _RISKY = [(re.compile(p, re.IGNORECASE), why) for p, why in RISKY]
 
@@ -75,7 +75,7 @@ def check_tags(m):
 
 
 def validate_rule_manifest(m, rid, filenames=()):
-    """rule.json(플러그인 방식 탐지 규칙) 내용 검사. 이상하면 ValueError(이유). guardian.py 의 validate_rule 이 읽을 때 한 번 더 검사하지만,
+    """rule.json(플러그인 방식 탐지 규칙) 내용 검사. 이상하면 ValueError(이유). warden.py 의 validate_rule 이 읽을 때 한 번 더 검사하지만,
     올릴 때 미리 걸러서 승인 대기에 이상한 것이 쌓이지 않게 한다. 새 규칙은 항상 꺼진 상태로 설치되므로 enabled 는 무시된다"""
     if not isinstance(m, dict):
         raise ValueError("rule.json 은 JSON 객체여야 합니다")
@@ -336,7 +336,7 @@ def delete_pending(pid):
 
 
 def _install_rule(pid, manifest, raw):
-    """탐지 규칙 승인: 스크립트를 먼저 rules/ 에 쓰고(실행 권한 755) 마지막에 규칙 파일을 쓴다 — Guardian 이 5초마다 rules/ 를 읽으므로
+    """탐지 규칙 승인: 스크립트를 먼저 rules/ 에 쓰고(실행 권한 755) 마지막에 규칙 파일을 쓴다 — WARDEN 이 5초마다 rules/ 를 읽으므로
     규칙 파일이 먼저 보이면 스크립트가 없는 채로 켜질 수 있다. 규칙은 항상 꺼진 상태로 설치되고, 켜는 건 사람이 대시보드에서 한다"""
     taken = _rule_conflicts(pid, raw)
     if taken:
@@ -354,7 +354,7 @@ def _install_rule(pid, manifest, raw):
             os.chmod(path, 0o755)
         rule = dict(manifest)
         rule["enabled"] = False
-        tmp = os.path.join(RULES_DIR, pid + ".json.tmp")                       # .json 으로 끝나지 않아 Guardian 이 무시함
+        tmp = os.path.join(RULES_DIR, pid + ".json.tmp")                       # .json 으로 끝나지 않아 WARDEN 이 무시함
         with open(tmp, "w", encoding="utf-8", newline="\n") as f:
             json.dump(rule, f, ensure_ascii=False, indent=2)
             f.write("\n")

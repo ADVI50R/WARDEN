@@ -118,9 +118,9 @@ function dryRunMetric(dryRun) {
 
 // ── 연결 상태: 응답이 끊기면 화면 전체에 알리고, 옛 숫자는 흐리게 ──
 let lastOkAt = 0;
-function setGuardian(up, why) {
+function setWarden(up, why) {
   const conn = $("#conn"), banner = $("#downBanner");
-  conn.textContent = up ? "Guardian 연결됨" : "⚠ 응답 없음";
+  conn.textContent = up ? "WARDEN 연결됨" : "⚠ 응답 없음";
   conn.className = "conn " + (up ? "ok" : "bad");
   banner.hidden = up;
   $("#metrics").classList.toggle("stale", !up);
@@ -128,7 +128,7 @@ function setGuardian(up, why) {
   if (up) { lastOkAt = Date.now(); $("#lastOk").textContent = ""; return; }
   const when = lastOkAt ? new Date(lastOkAt).toTimeString().slice(0, 8) : "없음";
   $("#lastOk").textContent = "마지막 응답 " + when;
-  banner.textContent = `⚠ Guardian 응답 없음: 탐지·차단이 멈췄을 수 있습니다. 화면의 숫자는 마지막으로 받은 값입니다 (마지막 정상 응답 ${when}). ${why || ""}`;
+  banner.textContent = `⚠ WARDEN 응답 없음: 탐지·차단이 멈췄을 수 있습니다. 화면의 숫자는 마지막으로 받은 값입니다 (마지막 정상 응답 ${when}). ${why || ""}`;
   const v = $("#statusValue");
   if (v) v.textContent = "⚠ 응답 없음";
 }
@@ -210,7 +210,7 @@ async function loadTop() {
   const [st, evs] = await Promise.all([api("/api/status"), api("/api/events?limit=200")]);
   lastStatus = st;
   ipNotes = st.notes || {};
-  setGuardian(true);
+  setWarden(true);
   setMode(st.dry_run);
   const s = st.stats || {};
   const attacks = evs.events.filter((e) => !ADMIN_TYPES.has(e.type));
@@ -268,7 +268,7 @@ function downloadCsv(events) {
   };
   const head = ["시간", "출발지", "출발지 메모", "대상", "유형", "이벤트", "위험도", "상태", "상세"];
   const lines = events.map((e) => [fmtTime(e.timestamp), e.source, noteOf(e.source), e.target, e.type, typeName(e.type), RISK[e.severity] || e.severity, ACTION[e.action] || e.action, e.detail].map(cell).join(","));
-  const a = el("a", {href: URL.createObjectURL(new Blob(["\ufeff" + [head.map(cell).join(","), ...lines].join("\r\n")], {type: "text/csv;charset=utf-8"})), download: "guardian_events.csv"});
+  const a = el("a", {href: URL.createObjectURL(new Blob(["\ufeff" + [head.map(cell).join(","), ...lines].join("\r\n")], {type: "text/csv;charset=utf-8"})), download: "warden_events.csv"});
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
@@ -342,7 +342,7 @@ async function downloadPcap(qs, btn) {
     if (r.status === 401) { showLogin(); return; }
     if (!r.ok) { const d = await r.json().catch(() => ({})); alert(d.error || ("오류 " + r.status)); return; }
     const blob = await r.blob();
-    const name = (/filename="([^"]+)"/.exec(r.headers.get("Content-Disposition") || "") || [])[1] || "guardian.pcap";
+    const name = (/filename="([^"]+)"/.exec(r.headers.get("Content-Disposition") || "") || [])[1] || "warden.pcap";
     const a = el("a", {href: URL.createObjectURL(blob), download: name});
     document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
@@ -1027,7 +1027,7 @@ function uploadCard(u) {
     el("p", {}, u.type === "rule" ? "승인(rules/ 에 '꺼진 상태'로 설치)은 보안 서버 터미널에서만 가능:" : "그래도 영구 설치(plugins/ 로 옮기기)는 보안 서버 터미널에서만 가능:"),
     el("pre", {}, "approve"),
     el("p", {class: "caption"}, `승인 화면 목록에서 '${u.id}' 를 골라 Enter → 끝까지 읽고 '승인' 선택 → yes 입력. ` +
-      `(approve 단축 명령이 없는 서버라면 python3 ~/guardian/dashboard/approve_plugin.py)`),
+      `(approve 단축 명령이 없는 서버라면 python3 ~/warden/dashboard/approve_plugin.py)`),
     box,
     el("div", {class: "row"},
       el("button", {class: "btn sm", type: "button", ...(sb.busy ? {disabled: ""} : {}), onclick: async () => {
@@ -1156,7 +1156,7 @@ async function loadPackets() {
     const box = $("#pkNotice"); clear(box);
     if (!d.enabled) box.append(el("div", {class: "alert info"}, "패킷 기록이 꺼져 있습니다 (보안 서버 config.json 의 packet_view.enabled)."));
     else if (d.unrecorded) box.append(el("div", {class: "caption"}, `초당 기록 한도를 넘어 ${d.unrecorded.toLocaleString()}개는 보관하지 않았습니다 (플러드 중이면 정상입니다).`));
-    if (d.last_seq < pkLast) { pkLast = 0; pkRows = []; pkDraw(); return; }   // Guardian 이 다시 시작됨
+    if (d.last_seq < pkLast) { pkLast = 0; pkRows = []; pkDraw(); return; }   // WARDEN 이 다시 시작됨
     pkLast = d.last_seq;
     if (d.packets.length) { pkRows = d.packets.reverse().concat(pkRows).slice(0, PK_MAX); pkDraw(); }
   } catch (e) { /* 연결 상태는 3초 새로고침이 표시함 */ }
@@ -1204,7 +1204,7 @@ function drawPreflight(st, rules) {
   const item = (ok, text) => el("li", {}, (ok === null ? "ℹ️ " : ok ? "✅ " : "⚠️ ") + text);
   const box = $("#preflight"); clear(box);
   const on = rules.filter((r) => r.enabled), off = rules.filter((r) => !r.enabled), never = on.filter((r) => !ruleHits[r.id]);
-  box.append(item(true, `Guardian 응답 정상 (감시 인터페이스 ${st.interface}, 켜진 지 ${fmtUp(st.uptime_sec)})`),
+  box.append(item(true, `WARDEN 응답 정상 (감시 인터페이스 ${st.interface}, 켜진 지 ${fmtUp(st.uptime_sec)})`),
     item(null, st.dry_run ? "지금 모드: 탐지만 (dry-run). 실제 차단 시연이면 개요에서 바꾸세요" : "지금 모드: 실제 차단"),
     item(!myIp || st.whitelist.includes(myIp), myIp ? `이 PC(${myIp}) ${st.whitelist.includes(myIp) ? "는 화이트리스트에 있음" : "가 화이트리스트에 없음: 차단되면 대시보드에 못 들어옴"}` : "이 PC 주소를 확인하지 못함"),
     item(st.utc_offset === browserOffset(), st.utc_offset === browserOffset() ? `서버와 이 PC 의 시간대가 같음 (${st.utc_offset})` : `서버 시간대(${st.utc_offset})가 이 PC(${browserOffset()})와 다름: 화면은 이 PC 기준이지만 서버 로그와 맞춰 보기 어려움`),
@@ -1260,7 +1260,7 @@ async function refresh(force) {
     await loadTop();
     if (currentView === "policy") drawWhitelist();
   } catch (e) {
-    if (e.message !== "로그인 필요") setGuardian(false, e.message.slice(0, 120));
+    if (e.message !== "로그인 필요") setWarden(false, e.message.slice(0, 120));
   }
   await Promise.allSettled(jobs);
   refreshing = false;

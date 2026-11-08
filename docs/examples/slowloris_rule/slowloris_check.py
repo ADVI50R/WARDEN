@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Slowloris (connection exhaustion) detector for Guardian script rules.
+"""Slowloris (connection exhaustion) detector for WARDEN script rules.
 
 Slowloris opens many connections to a server and keeps each one alive by
 sending a partial request very slowly, so the server runs out of connection
@@ -10,7 +10,7 @@ open right now (ESTABLISHED or SYN_RECV to one of this server's listening
 ports) by reading /proc/net/tcp and /proc/net/tcp6. It needs no root, no
 network access and no external programs.
 
-Output: one JSON line per suspicious IP, as Guardian expects:
+Output: one JSON line per suspicious IP, as WARDEN expects:
     {"source": "192.168.56.20", "detail": "..."}
 
 Options:

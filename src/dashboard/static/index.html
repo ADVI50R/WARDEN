@@ -19,7 +19,7 @@
 
 <div class="layout">
 <nav class="sidebar" id="sidebar" aria-label="메뉴">
-  <div class="brand">🛡️ Guardian</div>
+  <div class="brand">🛡️ WARDEN</div>
   <a class="navitem" href="#overview" data-view="overview"><span class="ico">📊</span><span>개요</span><span class="navbadge" id="newBadge" hidden></span></a>
   <a class="navitem" href="#packets" data-view="packets"><span class="ico">🔍</span><span>패킷 보기</span></a>
   <a class="navitem" href="#policy" data-view="policy"><span class="ico">⚙️</span><span>보안 정책</span></a>
@@ -82,7 +82,7 @@
 
 <section class="view" data-view="policy" hidden>
   <h2>⚙️ 보안 정책 제어</h2>
-  <p>탐지된 위협에 대해 Guardian 방화벽(iptables) 차단을 직접 적용하거나 해제할 수 있습니다.</p>
+  <p>탐지된 위협에 대해 WARDEN 방화벽(iptables) 차단을 직접 적용하거나 해제할 수 있습니다.</p>
   <form id="blockForm">
     <label class="lbl" for="blockTarget">차단할 공격자 IP 주소 (또는 mac:aa:bb:cc:dd:ee:ff)</label>
     <input id="blockTarget" class="txt" required>
@@ -105,7 +105,7 @@
     <thead><tr><th>대상</th><th>이유</th><th>시작</th><th>남은 시간</th><th>메모</th><th></th></tr></thead>
     <tbody id="blockedRows"></tbody>
   </table></div>
-  <p class="caption">🚨 차단을 한꺼번에 모두 풀어야 할 때(긴급 전체 해제)는 보안 서버 터미널에서 <code>gunblock</code> 을 실행하세요.
+  <p class="caption">🚨 차단을 한꺼번에 모두 풀어야 할 때(긴급 전체 해제)는 보안 서버 터미널에서 <code>wunblock</code> 을 실행하세요.
     토큰이 새더라도 방어를 한 번에 풀 수 없도록 대시보드에는 이 기능을 넣지 않았습니다.</p>
 
   <h3>📒 IP별 공격 기록</h3>
@@ -134,7 +134,7 @@
 <section class="view" data-view="tools" hidden>
   <h2>🧰 도구</h2>
   <p>보안 스크립트·앱(범용 도구)을 수동으로 실행/중지하는 곳입니다. 아래 "도구 올리기"로 올린 뒤 관리자가 서버에서 승인하면 3초 안에 카드로 나타납니다.
-    "탐지 규칙" 메뉴의 <b>플러그인 방식</b> 규칙과는 다른 것입니다 (그쪽은 Guardian 이 주기적으로 자동 실행).
+    "탐지 규칙" 메뉴의 <b>플러그인 방식</b> 규칙과는 다른 것입니다 (그쪽은 WARDEN 이 주기적으로 자동 실행).
     <button class="btn sm" id="pluginRescan" type="button">🔄 지금 다시 찾기</button></p>
   <div class="rulebar">
     <input id="toolSearch" class="txt" type="search" placeholder="🔍 도구 이름·설명·태그 검색 (예: 핑, 포트공격)" autocomplete="off">
@@ -161,9 +161,9 @@
 
 <section class="view" data-view="rules" hidden>
   <h2>🧪 탐지 규칙</h2>
-  <p>Guardian 이 탐지하는 모든 규칙입니다. 규칙은 보안 서버의 <code>rules/</code> 폴더에 파일 하나씩(<code>.json</code>) 들어 있고, 아래 양식으로 추가하거나
+  <p>WARDEN 이 탐지하는 모든 규칙입니다. 규칙은 보안 서버의 <code>rules/</code> 폴더에 파일 하나씩(<code>.json</code>) 들어 있고, 아래 양식으로 추가하거나
     파일을 넣고 고치면 재시작 없이 5초 안에 적용됩니다. 켜기/끄기/삭제도 바로 적용됩니다. 규칙은 작동 방식에 따라 둘로 나뉩니다:
-    <b>🔥 방화벽 방식</b>(Guardian 이 패킷을 직접 보고 판정)과 <b>🧩 플러그인 방식</b>(주기적으로 스크립트를 실행해 그 판정을 따름)입니다.</p>
+    <b>🔥 방화벽 방식</b>(WARDEN 이 패킷을 직접 보고 판정)과 <b>🧩 플러그인 방식</b>(주기적으로 스크립트를 실행해 그 판정을 따름)입니다.</p>
   <div id="ruleErrors"></div>
   <div id="ruleNotice"></div>
   <div class="rulebar">

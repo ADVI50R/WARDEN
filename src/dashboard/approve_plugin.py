@@ -32,7 +32,7 @@ def info_lines(info, with_text):
         r = info["rule"]
         out.append((f" 판정 스크립트: {' '.join(r['command'])}   {r['interval_sec']}초마다   위험도: {r['severity']}   "
                     f"{'방화벽 차단 켜짐' if r['block'] else '알림만'}", ""))
-        out.append((" (승인하면 rules/ 에 '꺼진 상태'로 설치됩니다. 스크립트는 Guardian 이 일반 계정 권한으로 주기마다 실행합니다)", ""))
+        out.append((" (승인하면 rules/ 에 '꺼진 상태'로 설치됩니다. 스크립트는 WARDEN 이 일반 계정 권한으로 주기마다 실행합니다)", ""))
     out.append((f" 올린 시각: {info['uploaded_at']}   올린 곳: {info['uploader'] or '-'}", ""))
     out.append((f" 해시(앞 12자리): {info['short']}", ""))
     if not info["intact"]:

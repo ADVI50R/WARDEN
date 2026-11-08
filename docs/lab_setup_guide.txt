@@ -1,5 +1,5 @@
 ==================================================================
-  Guardian 관제 실습 - 환경 준비 가이드
+  WARDEN 관제 실습 - 환경 준비 가이드
 ==================================================================
 
 [ 전체 구성 ]
@@ -7,7 +7,7 @@
   실제 PC (VirtualBox)
    └─ Windows 10 VM  ......... 인터넷 연결 O, DWAgent로 화면 공유
        └─ VirtualBox (중첩)
-           ├─ 보안 서버 (칼리)  192.168.56.10  guardian.py 실행
+           ├─ 보안 서버 (칼리)  192.168.56.10  warden.py 실행
            └─ 공격자   (칼리)  192.168.56.20  공격 시도
               └ 두 칼리는 "내부 네트워크 lab" 으로만 연결 (인터넷 X)
 
@@ -18,9 +18,9 @@
   2. 칼리 이미지 받기 + 서버 VM 만들기
   3. 공격자 VM 만들기 (복제)
   4. 칼리 첫 실행 + 기본 설정
-  5. 도구 설치 + Guardian 파일 옮기기   (인터넷 필요 - NAT 상태)
+  5. 도구 설치 + WARDEN 파일 옮기기   (인터넷 필요 - NAT 상태)
   6. 내부 네트워크로 전환 + IP 지정     (여기서부터 인터넷 X)
-  7. Guardian 실행 + 공격 테스트
+  7. WARDEN 실행 + 공격 테스트
   8. 시연용 화면 공유 (DWAgent)
   9. 문제 해결 모음
   10. 시연 당일 체크리스트
@@ -160,7 +160,7 @@
 
 
 ==================================================================
- 5. 도구 설치 + Guardian 파일 옮기기  (네트워크 = NAT 상태)
+ 5. 도구 설치 + WARDEN 파일 옮기기  (네트워크 = NAT 상태)
 ==================================================================
 
 [5-1] 보안 서버
@@ -174,22 +174,22 @@
   sudo apt update
   sudo apt install -y nmap hping3 dsniff
 
-[5-3] Guardian 파일을 보안 서버로 옮기기 (공유 폴더)
+[5-3] WARDEN 파일을 보안 서버로 옮기기 (공유 폴더)
 
-  1) Windows 10 에 C:\guardian 폴더를 만들고 파일 넣기
-     guardian.py / config.json / selftest.py / README.md
-  2) 보안 서버 VM 설정 > 공유 폴더 > + > 폴더 경로 C:\guardian
+  1) Windows 10 에 C:\warden 폴더를 만들고 파일 넣기
+     warden.py / config.json / selftest.py / README.md
+  2) 보안 서버 VM 설정 > 공유 폴더 > + > 폴더 경로 C:\warden
      > "자동 마운트" 체크 > 확인
   3) 보안 서버 칼리에서:
        sudo adduser $USER vboxsf
        sudo reboot
   4) 재부팅 후:
-       cp -r /media/sf_guardian ~/guardian
-       ls ~/guardian
+       cp -r /media/sf_warden ~/warden
+       ls ~/warden
 
 [5-4] 자체 테스트
 
-  cd ~/guardian
+  cd ~/warden
   python3 selftest.py
 
 [확인] "결과: 10/10 통과"
@@ -231,20 +231,20 @@
 
 
 ==================================================================
- 7. Guardian 실행 + 공격 테스트
+ 7. WARDEN 실행 + 공격 테스트
 ==================================================================
 
 [7-1] config.json 확인 (보안 서버)
 
-  nano ~/guardian/config.json
+  nano ~/warden/config.json
    - "interface": "eth0"        <- ip a 로 확인한 이름
    - "dry_run": true            <- 처음엔 탐지만 확인
   (저장: Ctrl+O, Enter / 종료: Ctrl+X)
 
 [7-2] 실행 (보안 서버)
 
-  cd ~/guardian
-  sudo python3 guardian.py
+  cd ~/warden
+  sudo python3 warden.py
 
   다른 터미널에서 API 확인:
   curl http://127.0.0.1:8000/api/status
@@ -277,9 +277,9 @@
 
 [7-4] 실제 차단 테스트
 
-  1) Ctrl+C 로 Guardian 종료
+  1) Ctrl+C 로 WARDEN 종료
   2) config.json 에서 "dry_run": false
-  3) 다시 sudo python3 guardian.py
+  3) 다시 sudo python3 warden.py
   4) 공격자에서 ① 포트 스캔 실행 -> 서버에 [BLOCK] 표시
   5) 공격자에서 ping 192.168.56.10 -> 응답 없으면 방어 성공
   6) 해제 (보안 서버 다른 터미널):
@@ -310,8 +310,8 @@
   sudo nmcli con up mgmt
 
 [7.5-4] 대시보드 실행 (보안 서버)
-  cd ~/guardian
-  sudo python3 guardian.py               # 터미널 1
+  cd ~/warden
+  sudo python3 warden.py               # 터미널 1
   python3 dashboard/server.py            # 터미널 2 -> 출력된 "로그인 토큰" 메모
 
 [7.5-5] 윈도우 10 브라우저에서  http://192.168.57.10:8080  접속 -> 토큰 입력
@@ -372,7 +372,7 @@
   -> 네트워크 이름 lab 이 똑같은지 / MAC 주소가 서로 다른지 /
      ip a 로 IP 가 들어갔는지 확인 / sudo nmcli con up lab
 
-  증상: /media/sf_guardian 이 안 보임
+  증상: /media/sf_warden 이 안 보임
   -> sudo adduser $USER vboxsf 후 재부팅 했는지 확인
      공유 폴더 설정에서 "자동 마운트" 체크 확인
 
@@ -380,13 +380,13 @@
   -> VirtualBox 에서 어댑터를 잠깐 NAT 로 바꾸고 sudo nmcli con down lab
      끝나면 다시 내부 네트워크 lab + sudo nmcli con up lab
 
-  증상: Guardian 이 강제 종료된 뒤 네트워크가 이상함
+  증상: WARDEN 이 강제 종료된 뒤 네트워크가 이상함
   -> iptables 규칙이 남은 것. 보안 서버에서:
-       sudo iptables -D INPUT -j GUARDIAN
-       sudo iptables -F GUARDIAN
-       sudo iptables -X GUARDIAN
+       sudo iptables -D INPUT -j WARDEN
+       sudo iptables -F WARDEN
+       sudo iptables -X WARDEN
 
-  증상: 인터페이스에 IP 가 없다는 Guardian 오류
+  증상: 인터페이스에 IP 가 없다는 WARDEN 오류
   -> config.json 의 "interface" 를 ip a 결과와 맞추기
 
   증상: CPU 사용률이 너무 높음
@@ -411,9 +411,9 @@
   [ ] 시청자용 공유 생성 (Screen 만, 마우스/키보드 끔, 기간 제한)
   [ ] 두 칼리 VM 실행 -> 서로 ping 확인
   [ ] 보안 서버: config.json 의 dry_run 값 확인 (실제 차단이면 false)
-  [ ] 보안 서버: sudo python3 guardian.py 실행
+  [ ] 보안 서버: sudo python3 warden.py 실행
   [ ] 공격자: 테스트 명령 미리 메모장에 준비
   [ ] 화면 배치 (왼쪽 공격자 / 오른쪽 서버), 터미널 글꼴 키우기
-  [ ] 시연 후: 공유 삭제, Guardian Ctrl+C 로 정상 종료
+  [ ] 시연 후: 공유 삭제, WARDEN Ctrl+C 로 정상 종료
 
 ==================================================================

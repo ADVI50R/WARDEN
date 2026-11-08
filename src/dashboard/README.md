@@ -1,9 +1,9 @@
-# Guardian 대시보드
+# WARDEN 대시보드
 
 파이썬 표준 라이브러리만 사용 → **인터넷 없이** 실행됩니다 (Streamlit/pip 설치 불필요).
 
 ```
-브라우저(윈도우 10) ──► server.py :8080 ──► Guardian API 127.0.0.1:8000
+브라우저(윈도우 10) ──► server.py :8080 ──► WARDEN API 127.0.0.1:8000
                           └─► plugins/*  (보안 스크립트들)
 ```
 
@@ -12,29 +12,29 @@
 "🧰 도구"와 "🧪 탐지 규칙"은 카드 격자입니다. 카드의 이름 밑에 `#태그`가 보이고, 태그를 누르면 그 태그만 걸러지며 검색창에서도 태그로 찾을 수 있습니다.
 태그는 도구는 `plugin.json`, 규칙은 `rules/<id>.json` 의 `"tags": ["포트공격", "스캔"]` 로 답니다 (6개까지, 공백 없이 20자까지, 앞의 `#` 는 있어도 없어도 됩니다).
 
-왼쪽 아래에는 지금 모드(탐지만 / 실제 차단)와 연결 상태가 항상 보입니다. Guardian 응답이 끊기면 화면 위에 빨간 경고가 뜨고 옛 숫자는 흐려집니다. 새 위협이 오면 어느 메뉴에 있든 화면 구석 알림, "개요" 메뉴의 숫자 배지, 탭 제목으로 알려 줍니다 (브라우저 알림은 HTTPS 가 필요해 쓰지 않습니다. 🔔 버튼으로 소리를 켤 수 있습니다). 시각은 보는 사람의 시간대로 표시합니다.
+왼쪽 아래에는 지금 모드(탐지만 / 실제 차단)와 연결 상태가 항상 보입니다. WARDEN 응답이 끊기면 화면 위에 빨간 경고가 뜨고 옛 숫자는 흐려집니다. 새 위협이 오면 어느 메뉴에 있든 화면 구석 알림, "개요" 메뉴의 숫자 배지, 탭 제목으로 알려 줍니다 (브라우저 알림은 HTTPS 가 필요해 쓰지 않습니다. 🔔 버튼으로 소리를 켤 수 있습니다). 시각은 보는 사람의 시간대로 표시합니다.
 
 - **알림 기준**: 기본은 위험도를 따릅니다 (Critical = 팝업+소리, Medium = 팝업, Low = 알림 없음). 탐지 규칙의 ⚙ 수정 창에서 "화면 팝업"·"소리"를 규칙마다 기본/켜기/끄기로 정할 수 있고, 정한 값이 먼저 적용됩니다 (규칙 파일의 `"notify": {"popup": true, "sound": false}`, 생략한 항목은 기본값). **알림 설정만 바꾸면 규칙은 꺼지지 않습니다.** "알림 없음"인 탐지도 탐지 로그와 기록에는 그대로 남습니다. 왼쪽 아래 🔔 버튼은 모든 소리를 한꺼번에 끄는 스위치입니다.
 - **공격자 타임라인**: 탐지 로그·차단 목록·IP별 기록의 주소를 누르면 그 출발지의 탐지·차단·해제가 시간순으로 나옵니다.
-- **점검·보고서 메뉴**: 시연 전 점검(Guardian 응답, 모드, 이 PC 의 화이트리스트 포함 여부, 시간대, 꺼진 규칙, 아직 탐지 안 된 규칙), 요약, 그래프, 규칙·탐지 기록 표. "인쇄 / PDF 저장"은 이 메뉴만 깔끔하게 인쇄합니다. 탐지 기록은 CSV 로도 받습니다.
+- **점검·보고서 메뉴**: 시연 전 점검(WARDEN 응답, 모드, 이 PC 의 화이트리스트 포함 여부, 시간대, 꺼진 규칙, 아직 탐지 안 된 규칙), 요약, 그래프, 규칙·탐지 기록 표. "인쇄 / PDF 저장"은 이 메뉴만 깔끔하게 인쇄합니다. 탐지 기록은 CSV 로도 받습니다.
 - **화이트리스트 편집**: 보안 정책 메뉴에서 주소를 추가·삭제합니다 (`POST /api/whitelist`). 추가·삭제 모두 확인 창을 거치고, 추가한 주소가 차단 중이면 차단을 풀어 줍니다. 서버 자신의 모든 주소와 127.0.0.1 은 뺄 수 없습니다 (🔒). 바꾼 내용은 `logs/whitelist_extra.json` 에 저장돼서 `config.json` 은 그대로이고 재시작 뒤에도 유지되며, "규칙 변경 기록"과 감사 기록에 남습니다. **화이트리스트 주소는 탐지·알림은 되지만 자동 차단은 되지 않으므로**, 토큰을 아는 사람이 공격자 IP 를 넣을 수 있다는 점에 주의하세요.
-- **감사 기록**: 보안 정책 메뉴 맨 아래. 대시보드로 한 조작(차단·해제·규칙 변경·올리기·도구 실행 등)과 토큰 실패를 시각·IP 와 함께 `~/guardian/audit.jsonl` (권한 600) 에 남깁니다. 토큰을 1분에 10번 틀리면 그 IP 는 1분 동안 거부합니다.
+- **감사 기록**: 보안 정책 메뉴 맨 아래. 대시보드로 한 조작(차단·해제·규칙 변경·올리기·도구 실행 등)과 토큰 실패를 시각·IP 와 함께 `~/warden/audit.jsonl` (권한 600) 에 남깁니다. 토큰을 1분에 10번 틀리면 그 IP 는 1분 동안 거부합니다.
 - **규칙 카드의 탐지 횟수**: 재시작해도 `logs/events.jsonl` 에서 복원됩니다. 탐지 로그와 누적 숫자도 마찬가지입니다.
 
 ## 실행 (보안 서버)
 `setup.py` 에서 "자동 시작 서비스"를 켰다면(실습 서버는 2026-11-08 부터 이 방식) 부팅 때 자동으로 켜지고, 죽으면 5초 뒤 다시 켜집니다.
 ```bash
-gstatus                                             # 상태 (sudo 불필요)
-sudo systemctl restart guardian.service             # 코드를 바꾼 뒤 Guardian 재시작 (grestart 도 같음)
-sudo systemctl restart guardian-dashboard.service   # 대시보드 재시작
+wstatus                                             # 상태 (sudo 불필요)
+sudo systemctl restart warden.service             # 코드를 바꾼 뒤 WARDEN 재시작 (wrestart 도 같음)
+sudo systemctl restart warden-dashboard.service   # 대시보드 재시작
 ```
 서비스로 설치하지 않았다면 직접 켭니다:
 ```bash
-cd ~/guardian
-sudo python3 guardian.py            # 터미널 1
+cd ~/warden
+sudo python3 warden.py            # 터미널 1
 python3 dashboard/server.py         # 터미널 2 (일반 권한으로 충분)
 ```
-로그인 **토큰**은 `dashboard/dashboard_config.json` 에 있습니다 (직접 켜면 화면에도 출력, `glog dashboard` 는 가려서 보여 줌).
+로그인 **토큰**은 `dashboard/dashboard_config.json` 에 있습니다 (직접 켜면 화면에도 출력, `wlog dashboard` 는 가려서 보여 줌).
 
 접속 주소: 윈도우 10 브라우저에서 `http://192.168.57.10:8080/` (가이드 7.5단계 — 호스트 전용 어댑터 설정). 서버 안에서는 `http://127.0.0.1:8080/`
 (같은 서버 안에서 확인만 할 땐 `http://127.0.0.1:8080/`)
@@ -49,10 +49,10 @@ python3 dashboard/server.py         # 터미널 2 (일반 권한으로 충분)
 - API: `GET /api/packets?since=<번호>&limit=200&proto=ICMP&ip=192.168.56.2&hide_ports=22,8080` (대시보드 토큰 필요, `since` 이후 새 패킷만 오래된 순으로 반환).
 
 ### PCAP 내보내기 (Wireshark 로 열기)
-- "💾 PCAP 저장 (Wireshark)" 버튼: 지금 걸어 둔 조건(프로토콜·IP·숨기기)에 맞는 기록을 `guardian_날짜_시각.pcap` 으로 받습니다. 화면 표와 같은 링 버퍼(기본 최근 2000개)에서 만들므로 "화면 지우기"와 상관없이 서버에 남아 있는 것이 들어갑니다.
+- "💾 PCAP 저장 (Wireshark)" 버튼: 지금 걸어 둔 조건(프로토콜·IP·숨기기)에 맞는 기록을 `warden_날짜_시각.pcap` 으로 받습니다. 화면 표와 같은 링 버퍼(기본 최근 2000개)에서 만들므로 "화면 지우기"와 상관없이 서버에 남아 있는 것이 들어갑니다.
 - 침입 상세 분석("ℹ️ 정보") 창의 "📦 관련 패킷 (PCAP)" 버튼: 그 이벤트의 출발지가 탐지 직전 구간(규칙의 `window_sec` + 앞뒤 5초, 근거 숫자가 없으면 60초)에 주고받은 패킷만 받습니다. ARP 스푸핑은 같은 구간의 ARP 패킷 전체입니다. 관리 작업 기록에는 버튼이 없습니다.
 - 패킷 보기와 같은 원칙으로 **헤더까지만** 저장합니다 (이더넷 + IPv4 + TCP/UDP/ICMP 헤더, 또는 ARP). 그래서 Wireshark 에서 각 패킷에 "Packet size limited during capture" 가 붙는 것이 정상이고, 원래 길이(Frame length)는 실제 값으로 보입니다. HTTP 내용·비밀번호 같은 payload 는 들어 있지 않습니다.
-- 기록에 없으면(오래된 공격, 플러드 중 초당 기록 한도 `packet_view.max_per_sec` 를 넘은 패킷, Guardian 재시작 전 패킷) "조건에 맞는 패킷이 기록에 없습니다" 가 뜹니다. 공격 직후에 받으세요.
+- 기록에 없으면(오래된 공격, 플러드 중 초당 기록 한도 `packet_view.max_per_sec` 를 넘은 패킷, WARDEN 재시작 전 패킷) "조건에 맞는 패킷이 기록에 없습니다" 가 뜹니다. 공격 직후에 받으세요.
 - API: `GET /api/pcap?proto=TCP&ip=192.168.56.20&hide_ports=22` 또는 `GET /api/pcap?event=<이벤트 id>` (대시보드 토큰 필요, 응답은 `application/vnd.tcpdump.pcap`, 헤더 `X-Packet-Count` 에 패킷 수).
 
 ## 플러그인 추가하는 법
@@ -60,7 +60,7 @@ python3 dashboard/server.py         # 터미널 2 (일반 권한으로 충분)
 
 가장 쉬운 방법은 **생성기**입니다. 보안 서버 터미널에서 질문에 답하면 폴더와 파일을 알아서 만들어 줍니다.
 ```bash
-python3 ~/guardian/dashboard/new_plugin.py
+python3 ~/warden/dashboard/new_plugin.py
 ```
 이름·설명·종류(1회 실행 / 계속 실행)·언어(python / bash)·입력받을 값만 고르면 `plugins/<id>/plugin.json` 과 `run.py`(또는 `run.sh`)가 만들어지고, 스크립트의 `# 여기에 ...` 자리에 할 일만 쓰면 됩니다. 한 줄로도 됩니다:
 ```bash
@@ -116,7 +116,7 @@ python3 dashboard/new_plugin.py --id my_scan --name "내 스캔" --kind task --l
 ```
 - 올리는 칸과 파일 종류가 다르면 거부합니다 (도구 칸에 `rule.json`, 규칙 칸에 `plugin.json` 등). `plugin.json` 과 `rule.json` 은 함께 올릴 수 없습니다.
 - **규칙 묶음(`rule.json`)의 검사**: `detector` 는 `"script"`, `id` 는 기본 탐지기·예약어와 겹치면 안 됨, 정해진 항목만 허용(오타 방지), `command` 첫 항목은 `./파일.py|.sh` 이고 함께 올라와야 함, `interval_sec`(5~3600) 필수, `timeout_sec`(1~60). `rule.json` 외의 `.json` 은 올릴 수 없고, `enabled` 는 무시되어 **항상 꺼진 상태로 설치**됩니다. 스크립트 이름이 `rules/` 의 기존 파일과 겹치면 거부합니다.
-- 규칙 승인은 스크립트를 먼저 쓰고(실행 권한 755) 마지막에 규칙 파일을 씁니다 (Guardian 이 5초마다 `rules/` 를 읽으므로, 규칙이 먼저 보이면 스크립트 없이 켜질 수 있음). `🧪 샌드박스로 실행` 은 규칙 스크립트도 확장자로 해석기를 골라 한 번만 돌려 볼 수 있습니다.
+- 규칙 승인은 스크립트를 먼저 쓰고(실행 권한 755) 마지막에 규칙 파일을 씁니다 (WARDEN 이 5초마다 `rules/` 를 읽으므로, 규칙이 먼저 보이면 스크립트 없이 켜질 수 있음). `🧪 샌드박스로 실행` 은 규칙 스크립트도 확장자로 해석기를 골라 한 번만 돌려 볼 수 있습니다.
 - **승인은 서버 터미널에서만** 합니다. 대시보드 API 에는 승인 기능이 없어서, 토큰이 새도 업로드만으로는 코드가 실행되지 않습니다. 화면에서는 올리기·내용 보기·삭제만 됩니다.
 - 올릴 때 서버가 검사합니다: 파일 이름(영문·숫자·`._-`, 확장자 `.json .py .sh`), 크기·개수, `plugin.json` 형식(`id`, `command` 첫 항목에 경로 금지, `..` 금지, 참조한 `./파일` 이 함께 올라와야 함, 입력값 종류, `timeout_sec` 범위). 이미 설치된 id 는 거부합니다 (조용히 덮어쓰기 방지).
 - 저장 위치 `plugins_pending/` 는 `dashboard/` 밖이고 실행 권한 없이 저장되며(640), 올린 시각·올린 곳(IP)·해시(SHA-256)가 `_meta.json` 에 남습니다.
@@ -129,23 +129,23 @@ python3 dashboard/new_plugin.py --id my_scan --name "내 스캔" --kind task --l
 - **이것도 '절대 안전'은 아닙니다** — 커널 네임스페이스에 기대는 격리라 커널 자체의 취약점에는 뚫릴 수 있습니다. 목표는 "검토 없이 업로드만으로 네트워크 유출·시스템 파일 접근 같은 실제 피해를 바로 주지 않는다"는 정도입니다. 영구적으로 믿고 쓸 플러그인은 여전히 코드를 읽고 터미널에서 승인하세요.
 
 ```bash
-python3 ~/guardian/dashboard/approve_plugin.py                    # 화면 모드: ↑↓ 로 고르고 Enter 로 열기, 끝까지 읽은 뒤 ←→ 로 승인·거절 선택
-python3 ~/guardian/dashboard/approve_plugin.py list               # 승인 대기 목록
-python3 ~/guardian/dashboard/approve_plugin.py show  my_scan      # 파일 내용·주의 패턴 보기
-python3 ~/guardian/dashboard/approve_plugin.py approve my_scan    # 내용을 다시 보여 주고, 해시 앞 12자리를 입력하면 설치
-python3 ~/guardian/dashboard/approve_plugin.py reject  my_scan    # 삭제(거절)
+python3 ~/warden/dashboard/approve_plugin.py                    # 화면 모드: ↑↓ 로 고르고 Enter 로 열기, 끝까지 읽은 뒤 ←→ 로 승인·거절 선택
+python3 ~/warden/dashboard/approve_plugin.py list               # 승인 대기 목록
+python3 ~/warden/dashboard/approve_plugin.py show  my_scan      # 파일 내용·주의 패턴 보기
+python3 ~/warden/dashboard/approve_plugin.py approve my_scan    # 내용을 다시 보여 주고, 해시 앞 12자리를 입력하면 설치
+python3 ~/warden/dashboard/approve_plugin.py reject  my_scan    # 삭제(거절)
 ```
 - 승인할 때는 방금 본 내용의 해시를 직접 입력해야 하고(`--hash` 로 줄 수도 있음), 그 사이에 같은 id 로 다시 올라오거나 파일이 바뀌었으면 해시가 달라져서 설치되지 않습니다. 설치되면 `plugins/<id>/` 로 옮겨지고 대시보드에 3초 안에 나타납니다.
 - 시험: `python3 dashboard/selftest_plugins.py` (임시 폴더에서 업로드 검사·승인·변조 거부를 확인, 실제 폴더는 안 건드림).
-- **알아 둘 점**: 승인된 플러그인은 대시보드를 켠 계정(`kali`) 권한으로 실행됩니다. 서버의 sudoers 가 `dashboard/*` 를 비밀번호 없이 허용하고 있으면(`/etc/sudoers.d/guardian-lab`, 와일드카드라 `..` 경로로 밖의 파일까지 root 로 실행될 수 있어 보임 — 직접 확인하지는 않음) 그 계정에서 root 로 올라갈 길이 될 수 있으니, 이 규칙은 정확한 파일 이름으로 좁히는 것을 권장하고 승인 전 검토도 꼼꼼히 하세요.
+- **알아 둘 점**: 승인된 플러그인은 대시보드를 켠 계정(`kali`) 권한으로 실행됩니다. 서버의 sudoers 가 `dashboard/*` 를 비밀번호 없이 허용하고 있으면(`/etc/sudoers.d/warden-lab`, 와일드카드라 `..` 경로로 밖의 파일까지 root 로 실행될 수 있어 보임 — 직접 확인하지는 않음) 그 계정에서 root 로 올라갈 길이 될 수 있으니, 이 규칙은 정확한 파일 이름으로 좁히는 것을 권장하고 승인 전 검토도 꼼꼼히 하세요.
 
 ## 침입 상세 분석 ("ℹ️ 정보" 버튼)
-"🚨 실시간 공격 탐지 로그" 표의 맨 오른쪽 **ℹ️ 정보** 를 누르면 그 이벤트를 풀어서 보여 줍니다 (Guardian 의 `analyze_event`, API `GET /api/event_analysis?id=<이벤트 ID>`).
+"🚨 실시간 공격 탐지 로그" 표의 맨 오른쪽 **ℹ️ 정보** 를 누르면 그 이벤트를 풀어서 보여 줍니다 (WARDEN 의 `analyze_event`, API `GET /api/event_analysis?id=<이벤트 ID>`).
 
 - **한 줄 결론**: 초록(성공적으로 막아냄) / 노랑(막지 못했지만 지금은 조용함 등) / 빨강(막지 못했고 공격이 계속되는 중 → IP 차단 추천).
 - **📍 어디서**: 출발지 IP(같은 내부망인지·사설 IP인지·인터넷 쪽인지), MAC, 메모, 목표(포트), 이 출발지의 누적 탐지 기록. (인터넷이 없는 실습망이라 공인 IP 위치 조회는 하지 않습니다.)
 - **⚔️ 어떤 공격**: 공격 종류 설명 + 탐지 상세.
-- **💥 영향**: "탐지 기준의 몇 배"와 서버 부담(램·CPU·회선) 추정(낮음/보통/높음). **실제로 잰 값이 아니라 공격 종류와 횟수로 짐작한 값**이라고 화면에도 적습니다. 로그인 성공 여부처럼 Guardian 이 알 수 없는 것은 어디서 확인하라고 안내합니다.
+- **💥 영향**: "탐지 기준의 몇 배"와 서버 부담(램·CPU·회선) 추정(낮음/보통/높음). **실제로 잰 값이 아니라 공격 종류와 횟수로 짐작한 값**이라고 화면에도 적습니다. 로그인 성공 여부처럼 WARDEN 이 알 수 없는 것은 어디서 확인하라고 안내합니다.
 - **🛡️ 대응 결과**: 당시 조치(차단 / dry-run / 알림만)와 **조회하는 지금**의 차단 상태, 최근 10초 동안 그 출발지에서 온 패킷 수(패킷 보기 기록 사용 — 차단 중이면 "도착했지만 방화벽이 버림").
 - **✅ 권고**: 상황별로 IP 차단·영구 차단(반복 공격자)·규칙의 "방화벽 차단" 켜기·dry-run 해제 안내 + 공격 종류별 대책. "🚫 이 IP 차단하러 가기" 는 차단 입력칸만 채워 줄 뿐 직접 차단하지는 않습니다.
 - **🔎 근거 데이터**: 횟수·기준·기간·포트 같은 탐지 당시 숫자(이벤트에 `meta` 로 저장). 이 기능을 넣기 전에 기록된 이벤트에는 근거 숫자가 없어서 일부 항목이 빠집니다.
@@ -153,17 +153,17 @@ python3 ~/guardian/dashboard/approve_plugin.py reject  my_scan    # 삭제(거�
 
 ## 보안 구조와 한계
 - **코드 실행 경로는 터미널 승인뿐입니다.** 토큰이 있어도 `/api/rules` 로 플러그인 방식 규칙을 만들 수 없고(403), 기존 규칙의 실행 명령을 바꿀 수 없습니다. 명령의 첫 항목은 `rules/` 바로 안의 파일만 허용하고, 실행 직전에 실제 경로를 다시 확인합니다 (심볼릭 링크로 밖을 가리켜도 거부). 스크립트는 권한을 낮추지 못하면 실행하지 않습니다.
-- **Guardian API(8000)** 는 토큰이 없어 127.0.0.1 에만 엽니다. CORS 를 허용하지 않고, `Origin` 이 붙은 요청(웹페이지)·다른 `Host`·JSON 이 아닌 POST 를 거부합니다. **서버 안의 프로그램은 막지 못합니다**: 승인된 도구도 8000번을 부를 수 있으므로 승인할 때 코드를 읽어야 합니다.
+- **WARDEN API(8000)** 는 토큰이 없어 127.0.0.1 에만 엽니다. CORS 를 허용하지 않고, `Origin` 이 붙은 요청(웹페이지)·다른 `Host`·JSON 이 아닌 POST 를 거부합니다. **서버 안의 프로그램은 막지 못합니다**: 승인된 도구도 8000번을 부를 수 있으므로 승인할 때 코드를 읽어야 합니다.
 - **탐지의 한계 (보고서에 쓸 내용)**: SYN 만 세므로 출발지를 위조하면 다른 IP 를 차단시킬 수 있습니다 (화이트리스트는 안전). 느린 스캔(`nmap -T1` 등)은 기간 안에 기준을 못 채워 놓칩니다. 플러드가 너무 빠르면 파이썬이 못 따라가며, 이때 "못 따라간 패킷"이 개요에 표시됩니다.
 - HTTP 라서 토큰이 암호화되지 않습니다. 관리망(호스트 전용 어댑터)에서만 접속하세요.
-- **root 권한 경계**: 실습 서버의 sudoers(`/etc/sudoers.d/guardian-lab`)는 비밀번호 없이 `systemctl start/stop/restart` 로 두 서비스를 다루는 것만 허용합니다 (파이썬 스크립트를 root 로 돌리는 허용은 없앰). 다만 Guardian 코드(`~/guardian/guardian.py`)는 일반 계정 `kali` 가 고칠 수 있는 위치에 있어서, `kali` 권한을 얻은 사람이 코드를 고치고 서비스를 재시작하면 root 로 실행됩니다. 막으려면 코드를 root 만 쓸 수 있는 위치로 옮겨야 하며, 실습에서는 코드 갱신 편의를 위해 이 한계를 받아들였습니다. 승인된 도구가 `kali` 권한으로 돌기 때문에 도구 승인 때 코드를 읽는 것이 중요합니다.
+- **root 권한 경계**: 실습 서버의 sudoers(`/etc/sudoers.d/warden-lab`)는 비밀번호 없이 `systemctl start/stop/restart` 로 두 서비스를 다루는 것만 허용합니다 (파이썬 스크립트를 root 로 돌리는 허용은 없앰). 다만 WARDEN 코드(`~/warden/warden.py`)는 일반 계정 `kali` 가 고칠 수 있는 위치에 있어서, `kali` 권한을 얻은 사람이 코드를 고치고 서비스를 재시작하면 root 로 실행됩니다. 막으려면 코드를 root 만 쓸 수 있는 위치로 옮겨야 하며, 실습에서는 코드 갱신 편의를 위해 이 한계를 받아들였습니다. 승인된 도구가 `kali` 권한으로 돌기 때문에 도구 승인 때 코드를 읽는 것이 중요합니다.
 
 ## 서버 API (토큰 필요: 헤더 `X-Token`)
-Guardian API(`/api/status|events|event_analysis|packets|blocked|rules|history|rule_changes|block|unblock|note`)를 그대로 전달 +
+WARDEN API(`/api/status|events|event_analysis|packets|blocked|rules|history|rule_changes|block|unblock|note`)를 그대로 전달 +
 `GET /api/plugins`, `POST /api/plugins/<id>/run|stop|enable`, `GET|POST /api/plugin_uploads`, `GET /api/plugin_uploads/<id>`, `POST /api/plugin_uploads/<id>/delete`, `POST /api/plugin_uploads/<id>/run_sandboxed`(설치 없이 격리 상태로 한 번 실행, 결과 미저장), `GET /api/whoami`(접속한 IP), `GET /api/audit`(감사 기록).
 
 ## 차단 기능 (대시보드 "보안 정책 제어")
-- 차단 기간은 일·시간·분 칸으로 직접 지정하거나 "영구 차단"을 체크합니다. 영구 차단은 자동 해제되지 않고, Guardian 을 껐다 켜도 `logs/permanent_blocks.json` 에서 다시 적용됩니다 (해제 버튼으로만 풀림).
+- 차단 기간은 일·시간·분 칸으로 직접 지정하거나 "영구 차단"을 체크합니다. 영구 차단은 자동 해제되지 않고, WARDEN 을 껐다 켜도 `logs/permanent_blocks.json` 에서 다시 적용됩니다 (해제 버튼으로만 풀림).
 - 메모는 차단 목록과 IP별 공격 기록의 입력칸에서 저장하며 `logs/notes.json` 에 남습니다 (200자).
 - IP별 공격 기록은 `logs/events.jsonl` 을 시작할 때 다시 읽어 누적합니다. 같은 IP 알림은 30초에 한 번만 기록되므로 횟수는 "알림 수"입니다.
 
@@ -171,20 +171,20 @@ Guardian API(`/api/status|events|event_analysis|packets|blocked|rules|history|ru
 규칙이 **자동으로** 차단한 대상이 24시간 안에 다시 자동 차단되면 단계별로 더 길게 막습니다: 1번째 5분 → 2번째 30분 → 3번째부터 2시간.
 - 규칙에 적힌 차단 시간(`block_duration_sec`)이 단계 시간보다 길면 규칙 값을 씁니다. 영구 차단 규칙은 그대로 영구입니다.
 - 수동 차단(대시보드), 화이트리스트 대상은 횟수에 들어가지 않습니다. dry-run 의 모의 차단도 똑같이 셉니다.
-- 차단 목록의 이유 옆에 `반복 2회째` 같은 표시가 붙습니다. 기록은 `logs/repeat_blocks.json` 에 남아 Guardian 을 다시 켜도 이어집니다.
-- 설정은 `config.json` 의 `repeat_block` (`enabled`, `window_sec`, `steps_sec`). 값이 잘못되면 기본값(켜짐, 86400초, `[300, 1800, 7200]`)을 씁니다. 바꾼 뒤에는 Guardian 재시작이 필요합니다.
+- 차단 목록의 이유 옆에 `반복 2회째` 같은 표시가 붙습니다. 기록은 `logs/repeat_blocks.json` 에 남아 WARDEN 을 다시 켜도 이어집니다.
+- 설정은 `config.json` 의 `repeat_block` (`enabled`, `window_sec`, `steps_sec`). 값이 잘못되면 기본값(켜짐, 86400초, `[300, 1800, 7200]`)을 씁니다. 바꾼 뒤에는 WARDEN 재시작이 필요합니다.
 
-### 긴급 전체 해제 (서버 터미널 전용: `gunblock`)
-차단을 한꺼번에 모두 풀어야 할 때(관리 PC 가 잘못 막힘, 실제 차단 시연이 꼬임 등) 보안 서버 터미널에서 `gunblock` (= `sudo python3 guardianctl.py unblock-all`) 을 실행합니다.
+### 긴급 전체 해제 (서버 터미널 전용: `wunblock`)
+차단을 한꺼번에 모두 풀어야 할 때(관리 PC 가 잘못 막힘, 실제 차단 시연이 꼬임 등) 보안 서버 터미널에서 `wunblock` (= `sudo python3 wardenctl.py unblock-all`) 을 실행합니다.
 **대시보드에는 일부러 넣지 않았습니다**: 토큰이 새더라도 한 번에 방어를 다 풀 수 없게 하려는 것이고, 정말 급한 상황(관리 PC 차단)에서는 어차피 대시보드에 들어갈 수 없습니다.
 - 지금 차단 목록(대상·이유·남은 시간·메모)을 보여 주고, `yes` 를 그대로 입력해야 실행합니다 (엔터·`y` 는 취소).
-- Guardian 이 응답하면 API 로 하나씩 해제합니다 → 차단 목록·영구 차단 파일·탐지 로그("차단 해제")가 함께 정리됩니다. dry-run 이면 모의 목록만 비워집니다.
-- Guardian 이 꺼졌거나 멈췄으면 방화벽 `GUARDIAN` 체인의 규칙을 보여 준 뒤 `iptables -F GUARDIAN` 으로 직접 비웁니다. 이때 `logs/permanent_blocks.json` 은 남으므로 Guardian 을 다시 켜면 영구 차단 대상은 다시 막힙니다 (다시 켠 뒤 `gunblock` 을 한 번 더).
+- WARDEN 이 응답하면 API 로 하나씩 해제합니다 → 차단 목록·영구 차단 파일·탐지 로그("차단 해제")가 함께 정리됩니다. dry-run 이면 모의 목록만 비워집니다.
+- WARDEN 이 꺼졌거나 멈췄으면 방화벽 `WARDEN` 체인의 규칙을 보여 준 뒤 `iptables -F WARDEN` 으로 직접 비웁니다. 이때 `logs/permanent_blocks.json` 은 남으므로 WARDEN 을 다시 켜면 영구 차단 대상은 다시 막힙니다 (다시 켠 뒤 `wunblock` 을 한 번 더).
 - 실행 결과는 감사 기록(`audit.jsonl`, 화면의 감사 기록)에 출처 "서버 터미널", 동작 `unblock_all` 로 남습니다.
 - 공격이 계속되면 규칙에 따라 다시 차단될 수 있습니다. 계속 풀어 두려면 그 IP 를 화이트리스트에 넣거나 규칙을 끄세요.
 
 ## 탐지 규칙 (`rules/` 폴더)
-모든 탐지 규칙(포트 스캔 같은 기본 규칙과 직접 만든 규칙 구분 없이)은 보안 서버의 `rules/<id>.json` 파일 하나씩입니다. 파일을 넣거나 고치면 Guardian 재시작 없이 5초 안에 적용되고,
+모든 탐지 규칙(포트 스캔 같은 기본 규칙과 직접 만든 규칙 구분 없이)은 보안 서버의 `rules/<id>.json` 파일 하나씩입니다. 파일을 넣거나 고치면 WARDEN 재시작 없이 5초 안에 적용되고,
 화면의 "🧪 탐지 규칙"에서 양식으로 추가하거나 켜기·끄기·삭제할 수 있습니다 (검색·필터 포함). 규칙은 코드가 아니라 **조건 데이터**라서, 잘못 써도 임의 코드가 실행되지 않습니다 (잘못된 파일은 화면에 이유가 표시되고 무시됨).
 
 - **카드와 태그**: 규칙은 카드로 보입니다. 오른쪽 위에 ⚙(수정)·🗑️(삭제)·켜기/끄기 스위치가 있고, 꺼진 규칙은 흐리게 보입니다. 모든 규칙 파일에 `"tags": [...]` 를 쓸 수 있고, 추가·수정 창에도 태그 칸이 있습니다 (파일을 읽을 때 이상한 태그는 건너뛰어 규칙이 사라지지 않고, 화면에서 저장할 때는 이유를 알려 줍니다).
@@ -195,7 +195,7 @@ Guardian API(`/api/status|events|event_analysis|packets|blocked|rules|history|ru
 - 기본 탐지기(`port_scan`, `syn_flood`, `icmp_flood`, `ssh_bruteforce`, `ssh_login_success`, `arp_spoof`, `exfiltration`)의 규칙을 지우면 그 탐지가 꺼진 상태가 됩니다. 같은 이름의 파일을 `rules/` 에 다시 넣으면 복구됩니다.
 - 임계값(횟수·기간 등)도 이 파일에서 바꿉니다 (예전 `config.json` 의 `rules` 항목은 `rules/` 로 옮겨졌습니다).
 - 규칙을 켜거나 끄거나 추가·삭제하면 "📝 규칙 변경 기록" 접이식 칸에 남습니다. 탐지 로그나 "탐지된 위협(누적)", IP별 공격 기록에는 들어가지 않습니다.
-- 예전 구조(`custom_rules/` 폴더, `logs/rule_overrides.json`)는 Guardian 을 시작할 때 자동으로 `rules/` 로 옮겨집니다.
+- 예전 구조(`custom_rules/` 폴더, `logs/rule_overrides.json`)는 WARDEN 을 시작할 때 자동으로 `rules/` 로 옮겨집니다.
 
 ### 직접 만든 규칙 (`detector` 를 생략하거나 `"custom"`)
 `rules/telnet_probe.json` 이 꺼진 상태의 예제입니다.
@@ -233,10 +233,10 @@ Guardian API(`/api/status|events|event_analysis|packets|blocked|rules|history|ru
 | `exfiltration` | `window_sec`, `max_bytes` (알림만, 차단 불가) |
 
 ### 플러그인 방식 규칙 (`detector: "script"`)
-위 두 가지(직접 만든 규칙·기본 탐지기)는 전부 **방화벽 방식**입니다 — Guardian 이 지나가는 패킷을 직접 보고 판정합니다.
-플러그인 방식은 패킷 대신 **스크립트의 판정**을 씁니다: Guardian 이 `interval_sec` 마다 스크립트를 실행하고, 공격으로 보이면
+위 두 가지(직접 만든 규칙·기본 탐지기)는 전부 **방화벽 방식**입니다 — WARDEN 이 지나가는 패킷을 직접 보고 판정합니다.
+플러그인 방식은 패킷 대신 **스크립트의 판정**을 씁니다: WARDEN 이 `interval_sec` 마다 스크립트를 실행하고, 공격으로 보이면
 스크립트가 `{"source": "IP", "detail": "설명"}` 같은 한 줄 JSON 을 줄마다 표준출력으로 내보냅니다. 화이트리스트 확인·차단·로그
-기록은 전부 Guardian 이 하고, 스크립트는 **판정만** 합니다 (직접 iptables 를 건드리지 않음).
+기록은 전부 WARDEN 이 하고, 스크립트는 **판정만** 합니다 (직접 iptables 를 건드리지 않음).
 
 ```json
 {
@@ -254,13 +254,13 @@ Guardian API(`/api/status|events|event_analysis|packets|blocked|rules|history|ru
 - `interval_sec` (5~3600): 이 주기로 스크립트를 실행합니다. `timeout_sec` (1~60, 기본 10): 이보다 오래 걸리면 강제 종료합니다.
 - `port_scan` 은 SYN 스캔 외에 NULL·FIN·Xmas 스캔과 UDP 스캔(출발 포트가 DNS·NTP·DHCP 등인 서비스 응답은 제외)도 셉니다. 서버의 모든 IP 를 "나"로 보므로 관리망 주소를 감시망 쪽으로 찔러도 탐지합니다.
 - **추가하는 방법은 "올리기"입니다** (화면의 "📤 플러그인 방식 규칙 올리기 (승인 대기)": `rule.json` + 스크립트를 올리고, 서버 터미널의 `approve_plugin.py` 로 승인하면 `rules/` 에 꺼진 상태로 설치됨 — 위 "플러그인 업로드" 참고). 예전의 "플러그인 방식 규칙 추가" 양식은 없앴습니다 (양식은 규칙 파일만 만들고 스크립트는 따로 `rules/` 에 넣어야 해서 반쪽짜리였음). 공유 폴더·git 으로 `rules/` 에 직접 넣는 것도 여전히 가능하지만, 그 경우 실행 권한(`chmod +x`)을 직접 줘야 합니다.
-- **실행 권한**: Guardian 은 root 로 뜨지만 탐지 스크립트는 `rules/` 폴더(= `~/guardian` 를 소유한 계정, 보통 `kali`) 권한으로 낮춰서 실행합니다 — 대시보드 플러그인과 같은 권한입니다. root 가 필요한 스크립트는 지원하지 않습니다.
+- **실행 권한**: WARDEN 은 root 로 뜨지만 탐지 스크립트는 `rules/` 폴더(= `~/warden` 를 소유한 계정, 보통 `kali`) 권한으로 낮춰서 실행합니다 — 대시보드 플러그인과 같은 권한입니다. root 가 필요한 스크립트는 지원하지 않습니다.
 - 규칙은 주기보다 오래 걸려도 겹쳐 돌지 않습니다. 시간 제한이 되면 자식 프로세스까지 끝냅니다.
 - 출력 한 줄이 늘어도 최대 200줄·줄당 4096바이트까지만 읽고 나머지는 버립니다. 표준출력이 없고 종료 코드가 0이 아니면 오류로 보고 화면에 한 번만 표시합니다 (같은 오류는 반복해서 찍지 않음).
 - `block` 을 켜면 스크립트가 알린 `source` 를 방화벽 방식과 똑같이 차단합니다 (화이트리스트 제외, `block_duration_sec`/`block_permanent` 도 동일).
 
 ## 실제 차단 켜기/끄기 (대시보드 슬라이드)
-화면 맨 위 "관제 서버 상태" 카드의 슬라이드로 dry-run(탐지만) ↔ 실제 차단을 바로 전환합니다. Guardian 재시작이 필요 없고, 끄는 순간 그동안 추적 중이던
+화면 맨 위 "관제 서버 상태" 카드의 슬라이드로 dry-run(탐지만) ↔ 실제 차단을 바로 전환합니다. WARDEN 재시작이 필요 없고, 끄는 순간 그동안 추적 중이던
 차단 대상 전부에 iptables 규칙이 다시 걸립니다 (반대로 켜면 규칙만 비우고 차단 목록·남은 시간은 그대로 보입니다). 실제 차단을 켤 때는 "화이트리스트에
-없는 탐지 대상은 진짜로 막힌다"는 확인 창이 한 번 뜹니다. 상태는 `logs/dry_run_override.json` 에 저장되어 Guardian 을 다시 켜도 유지되고, `config.json`
+없는 탐지 대상은 진짜로 막힌다"는 확인 창이 한 번 뜹니다. 상태는 `logs/dry_run_override.json` 에 저장되어 WARDEN 을 다시 켜도 유지되고, `config.json`
 의 `dry_run` 값보다 우선합니다.

