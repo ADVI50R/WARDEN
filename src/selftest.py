@@ -533,6 +533,28 @@ res = g.update_rule("t_sc", {"name": "새 이름", "interval_sec": 5})
 check("플러그인 방식 규칙: 명령은 못 바꾸고 이름 등은 수정 가능",
       not changed_cmd and res["changed"] and g.rules_all["t_sc"]["command"] == ["./check.py"] and g.rules_all["t_sc"]["name"] == "새 이름")
 
+# 플러그인 방식 규칙을 지우면 딸린 스크립트 파일도 함께 지워져 고아 파일이 남지 않는다
+with open(os.path.join(tmp, "del_chk.py"), "w", encoding="utf-8") as f:
+    f.write("#!/usr/bin/env python3\n")
+put("t_scdel", {"id": "t_scdel", "detector": "script", "command": ["./del_chk.py"], "interval_sec": 5})
+g.reload_rules()
+g.delete_rule("t_scdel")
+check("플러그인 방식 규칙 삭제: 딸린 스크립트 파일도 함께 삭제 (고아 파일 방지)",
+      "t_scdel" not in g.rules_all and not os.path.exists(os.path.join(tmp, "del_chk.py")))
+
+# 두 규칙이 같은 스크립트를 쓰면, 하나를 지워도 그 스크립트는 남겨 두고 마지막까지 지워야 치운다
+with open(os.path.join(tmp, "shared_chk.py"), "w", encoding="utf-8") as f:
+    f.write("#!/usr/bin/env python3\n")
+put("t_sh1", {"id": "t_sh1", "detector": "script", "command": ["./shared_chk.py"], "interval_sec": 5})
+put("t_sh2", {"id": "t_sh2", "detector": "script", "command": ["./shared_chk.py"], "interval_sec": 5})
+g.reload_rules()
+g.delete_rule("t_sh1")
+check("플러그인 방식 규칙 삭제: 다른 규칙이 같은 스크립트를 쓰면 파일을 남긴다",
+      "t_sh1" not in g.rules_all and "t_sh2" in g.rules_all and os.path.exists(os.path.join(tmp, "shared_chk.py")))
+g.delete_rule("t_sh2")
+check("공유 스크립트: 마지막 규칙까지 지우면 스크립트 파일도 삭제",
+      "t_sh2" not in g.rules_all and not os.path.exists(os.path.join(tmp, "shared_chk.py")))
+
 import threading, urllib.error, urllib.request
 srv = g.ThreadingHTTPServer(("127.0.0.1", 0), g.API)
 threading.Thread(target=srv.serve_forever, daemon=True).start()

@@ -1182,22 +1182,45 @@ pkDraw();
 
 // ── 점검·보고서 ──
 // rows: [이름, 값, (선택) 마우스를 올렸을 때 보일 글]
+// rows: [이름, 수, 설명(선택), 위험도라벨(선택: Low/Medium/Critical)]. 위험도가 있으면 막대 색을 위험도에 맞춘다
 function hbars(box, rows) {
   clear(box);
   if (!rows.length) return box.append(el("p", {class: "caption"}, "아직 기록이 없습니다."));
   const max = Math.max(...rows.map((r) => r[1]));
-  rows.forEach(([name, n, tip]) => box.append(el("div", {class: "hbar", title: `${tip || name}: ${n}건`}, el("span", {class: "nm"}, name),
-    el("div", {class: "track"}, el("div", {class: "fill", style: `width:${Math.max(1, n / max * 100)}%`})), el("span", {class: "val"}, n))));
+  rows.forEach(([name, n, tip, sev]) => box.append(el("div", {class: "hbar", title: `${tip || name}: ${n}건`}, el("span", {class: "nm"}, name),
+    el("div", {class: "track"}, el("div", {class: "fill" + (sev ? " sev-" + sev : ""), style: `width:${Math.max(1, n / max * 100)}%`})), el("span", {class: "val"}, n))));
 }
-function timeChart(box, events) {
+const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+// 기간별 탐지 수 그래프. mode: "24h"(시간별) / "7d" / "30d"(일별) / "12mo"(월별)
+function timeChart(box, events, mode) {
   clear(box);
-  const hour = 3600000, end = Math.ceil(Date.now() / hour) * hour;
-  const bins = Array(24).fill(0);
-  events.forEach((e) => { const i = 23 - Math.floor((end - 1 - Date.parse(e.timestamp)) / hour); if (i >= 0 && i < 24) bins[i]++; });
-  const max = Math.max(1, ...bins), label = (i) => new Date(end - (24 - i) * hour).getHours() + "시";
-  box.append(el("div", {class: "tchart", role: "img", "aria-label": `최근 24시간 탐지 수, 최대 시간당 ${max}건`},
-    bins.map((n, i) => el("div", {class: "tcol", title: `${label(i)}: ${n}건`}, n ? el("div", {class: "tbar", style: `height:${n / max * 100}%`}) : null))));
-  box.append(el("div", {class: "taxis"}, el("span", {}, label(0)), el("span", {}, label(12)), el("span", {}, `지금 · 시간당 최대 ${max}건`)));
+  const now = new Date();
+  let bins, labelOf, binOf, desc;
+  if (mode === "7d" || mode === "30d") {
+    const days = mode === "7d" ? 7 : 30;
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1)).getTime();
+    bins = Array(days).fill(0);
+    binOf = (d) => Math.floor((startOfDay(d) - start) / 86400000);
+    labelOf = (i) => { const d = new Date(start + i * 86400000); return (d.getMonth() + 1) + "/" + d.getDate(); };
+    desc = `최근 ${days}일 일별`;
+  } else if (mode === "12mo") {
+    const baseY = now.getFullYear(), baseM = now.getMonth();     // 이번 달이 마지막 칸
+    bins = Array(12).fill(0);
+    binOf = (d) => (d.getFullYear() - baseY) * 12 + (d.getMonth() - baseM) + 11;
+    labelOf = (i) => (new Date(baseY, baseM - 11 + i, 1).getMonth() + 1) + "월";
+    desc = "최근 12개월 월별";
+  } else {
+    const hour = 3600000, end = Math.ceil(now.getTime() / hour) * hour;
+    bins = Array(24).fill(0);
+    binOf = (d) => 23 - Math.floor((end - 1 - d.getTime()) / hour);
+    labelOf = (i) => new Date(end - (24 - i) * hour).getHours() + "시";
+    desc = "최근 24시간 시간별";
+  }
+  events.forEach((e) => { const i = binOf(new Date(Date.parse(e.timestamp))); if (i >= 0 && i < bins.length) bins[i]++; });
+  const max = Math.max(1, ...bins), mid = Math.floor((bins.length - 1) / 2);
+  box.append(el("div", {class: "tchart", role: "img", "aria-label": `${desc} 탐지 수, 최대 ${max}건`},
+    bins.map((n, i) => el("div", {class: "tcol", title: `${labelOf(i)}: ${n}건`}, n ? el("div", {class: "tbar", style: `height:${n / max * 100}%`}) : null))));
+  box.append(el("div", {class: "taxis"}, el("span", {}, labelOf(0)), el("span", {}, labelOf(mid)), el("span", {}, `${labelOf(bins.length - 1)} · 최대 ${max}건`)));
 }
 const browserOffset = () => { const m = -new Date().getTimezoneOffset(), p = (n) => String(Math.floor(n)).padStart(2, "0"); return `${m < 0 ? "-" : "+"}${p(Math.abs(m) / 60)}:${p(Math.abs(m) % 60)}`; };
 function drawPreflight(st, rules) {
@@ -1211,7 +1234,13 @@ function drawPreflight(st, rules) {
     item(!off.length, off.length ? `꺼진 규칙 ${off.length}개: ${off.map((r) => r.name).join(", ")}` : "모든 규칙이 켜져 있음"),
     item(!never.length, never.length ? `아직 한 번도 탐지 안 된 규칙 ${never.length}개 (시험해 보세요): ${never.map((r) => r.name).join(", ")}` : "켜진 규칙이 모두 한 번 이상 탐지됨"));
 }
-let reportEvents = [];
+let reportEvents = [], reportAttacks = [], timeMode = "24h";
+function renderTimeChart() { timeChart($("#chartTime"), reportAttacks, timeMode); }
+document.querySelectorAll("#timeRange button").forEach((b) => b.addEventListener("click", () => {
+  timeMode = b.dataset.range;
+  document.querySelectorAll("#timeRange button").forEach((x) => x.classList.toggle("active", x === b));
+  renderTimeChart();
+}));
 async function loadReport() {
   const [st, evs, rl, hist] = await Promise.all([api("/api/status"), api("/api/events?limit=1000"), api("/api/rules"), api("/api/history?limit=10")]);
   ruleHits = rl.hits || {};
@@ -1226,12 +1255,13 @@ async function loadReport() {
     metric("자동 차단", (s.blocks_auto || 0) + " 건", `모의 ${s.blocks_auto_sim || 0} 건`),
     metric("공격 출발지", hist.history.length + " 곳", "탐지 기록이 있는 IP·MAC (최대 10곳 표시)"),
     metric("켜진 규칙", rl.rules.filter((r) => r.enabled).length + " 개", `전체 ${rl.rules.length} 개`));
-  timeChart($("#chartTime"), attacks);
+  reportAttacks = attacks;
+  renderTimeChart();
   // 메모가 있으면 메모를 이름으로 (주소는 길어서 메모가 잘림), 마우스를 올리면 주소와 메모
   hbars($("#chartIps"), hist.history.map((h) => { const n = noteOf(h.source); return [n || h.source, h.total, n ? `${h.source} (메모: ${n})` : h.source]; }));
-  const byType = {};
-  attacks.forEach((e) => { byType[typeName(e.type)] = (byType[typeName(e.type)] || 0) + 1; });
-  hbars($("#chartTypes"), Object.entries(byType).sort((x, y) => y[1] - x[1]));
+  const byType = {};   // 유형별: 탐지 수 + 그 유형의 위험도(가장 센 값) -> 막대 색을 위험도에 맞춤
+  attacks.forEach((e) => { const k = typeName(e.type), b = byType[k] || (byType[k] = {n: 0, sev: e.severity}); b.n++; if (SEV_RANK[e.severity] > SEV_RANK[b.sev]) b.sev = e.severity; });
+  hbars($("#chartTypes"), Object.entries(byType).sort((x, y) => y[1].n - x[1].n).map(([name, b]) => [name, b.n, null, RISK[b.sev]]));
   const rr = $("#repRules"); clear(rr);
   rl.rules.forEach((r) => rr.append(el("tr", {}, el("td", {}, r.name), el("td", {}, r.enabled ? "켜짐" : "꺼짐"), el("td", {class: "sev-" + RISK[r.severity]}, RISK[r.severity]),
     el("td", {}, blockText(r)), el("td", {}, (ruleHits[r.id] || {}).count || 0), el("td", {}, fmtTime((ruleHits[r.id] || {}).last)))));

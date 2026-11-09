@@ -1139,12 +1139,23 @@ def delete_rule(rid):
             return None
         was_enabled = rule["enabled"]
         rule["enabled"] = False              # RULES 안의 같은 객체이므로 탐지기도 바로 멈춤
+        script_path = _rule_script_path(rule)         # script 방식이면 딸린 스크립트 파일 경로
+        if script_path is not None:                   # 다른 규칙이 같은 스크립트를 쓰면 지우지 않는다
+            for other in rules_all.values():
+                if other is not rule and _rule_script_path(other) == script_path:
+                    script_path = None
+                    break
     try:
         os.remove(os.path.join(RULES_DIR, rid + ".json"))
     except OSError:
         with lock:
             rule["enabled"] = was_enabled    # 못 지웠으면 원래대로
         raise
+    if script_path is not None:              # 규칙이 지워졌으니 딸린 스크립트도 정리 (고아 파일 방지)
+        try:
+            os.remove(script_path)
+        except OSError:
+            pass                             # 규칙 삭제는 이미 끝났다 — 스크립트는 최선으로만 지운다
     reload_rules(force=True)
     return was_enabled
 
@@ -1256,6 +1267,21 @@ def _script_command(rule):
         raise ValueError(f"스크립트가 rules/ 밖을 가리킵니다: {cmd[0]}")
     cmd[0] = full
     return cmd
+
+
+def _rule_script_path(rule):
+    """script 방식 규칙이 실행하는 파일의 실제 경로(rules/ 폴더 안)를 돌려준다.
+    형식이 틀리거나 rules/ 밖을 가리키면 None (그런 건 지우지 않는다)."""
+    if not isinstance(rule, dict) or rule.get("detector") != "script":
+        return None
+    cmd = rule.get("command")
+    if not isinstance(cmd, list) or not cmd or not isinstance(cmd[0], str) or not SCRIPT_CMD_RE.match(cmd[0]):
+        return None
+    root = os.path.realpath(RULES_DIR)
+    full = os.path.realpath(os.path.join(root, cmd[0][2:]))
+    if not full.startswith(root + os.sep):
+        return None
+    return full
 
 
 def _script_env():
@@ -1842,12 +1868,18 @@ class API(BaseHTTPRequestHandler):
                                     else "수정됨 (자동으로 꺼짐)" if res["was_enabled"] else "수정됨 (꺼짐 상태 유지)")
                 return self._send(200, {"ok": True, **res})
             if path == "/api/rules/delete":
+                with lock:
+                    doomed = rules_all.get(rid)
+                    script_path = _rule_script_path(doomed) if doomed else None
+                had_script = bool(script_path) and os.path.exists(script_path)
                 was_enabled = delete_rule(rid)
                 if was_enabled is None:
                     return self._send(200, {"ok": False, "reason": "없는 규칙"})
                 if was_enabled:
                     log_rule_change(rid, "꺼짐 (삭제 전 자동 비활성화)")
                 log_rule_change(rid, "삭제됨")
+                if had_script and not os.path.exists(script_path):   # 딸린 스크립트도 같이 지워졌을 때만 기록
+                    log_rule_change(rid, "딸린 스크립트 파일도 삭제: " + os.path.basename(script_path))
                 return self._send(200, {"ok": True, "was_enabled": was_enabled})
             if path == "/api/rules/enable":
                 if not isinstance(body.get("enabled"), bool):

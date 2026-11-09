@@ -231,6 +231,12 @@ textarea.txt.desc{resize:none;overflow:hidden;line-height:1.45;font:inherit;whit
 .hbar .track{height:10px}
 .hbar .fill{height:100%;background:var(--chart);border-radius:0 4px 4px 0;min-width:2px}
 .hbar .val{text-align:right;color:var(--mute)}
+.hbar .fill.sev-Critical{background:var(--down)}.hbar .fill.sev-Medium{background:var(--warn)}.hbar .fill.sev-Low{background:var(--info)}
+.charthead{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.segbtns{display:inline-flex;border:1px solid var(--line);border-radius:.5rem;overflow:hidden}
+.segbtns button{border:0;background:var(--bg);color:var(--text);padding:.3rem .7rem;font:inherit;font-size:13px;cursor:pointer}
+.segbtns button+button{border-left:1px solid var(--line)}
+.segbtns button.active{background:var(--chart);color:#fff}
 @media print{
   :root{--bg:#fff;--bg2:#f0f2f6;--text:#31333f;--mute:rgba(49,51,63,.6);--line:rgba(49,51,63,.2)}
   .sidebar,#toasts,.noprint,#downBanner,h1{display:none!important}

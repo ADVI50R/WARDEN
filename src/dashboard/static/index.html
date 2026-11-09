@@ -251,7 +251,14 @@
   </div>
   <div class="noprint"><h3>✅ 시연 전 점검</h3><ul class="checks" id="preflight"></ul></div>
   <h3>요약</h3><div class="metrics" id="repSummary"></div>
-  <h3>📈 최근 24시간 탐지 수</h3><div id="chartTime"></div>
+  <div class="charthead"><h3>📈 탐지 수 추이</h3>
+    <div class="segbtns noprint" id="timeRange">
+      <button type="button" data-range="24h" class="active">24시간</button>
+      <button type="button" data-range="7d">7일</button>
+      <button type="button" data-range="30d">30일</button>
+      <button type="button" data-range="12mo">12개월</button>
+    </div></div>
+  <div id="chartTime"></div>
   <div class="chartrow">
     <div><h3>공격자 순위 (탐지 수)</h3><div id="chartIps"></div></div>
     <div><h3>유형별 탐지 수</h3><div id="chartTypes"></div></div>
